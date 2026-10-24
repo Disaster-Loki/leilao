@@ -3,8 +3,9 @@ import cors from "cors";
 import helmet from "helmet";
 import { env } from "./config/env";
 import { pool } from "./db/pool";
-import { errorHandler, asyncHandler } from "./middleware/error";
 import { authRouter } from "./modules/auth/auth.routes";
+import { errorHandler, asyncHandler } from "./middleware/error";
+import { walletRouter } from "./modules/wallet/wallet.routes";
 
 export const app = express();
 
@@ -21,6 +22,7 @@ app.get(
 );
 
 app.use("/auth", authRouter);
+app.use("/wallet", walletRouter);
 
 // SEMPRE por último
 app.use(errorHandler);
