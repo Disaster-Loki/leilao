@@ -132,6 +132,17 @@ As permissões são verificadas **no servidor** em cada rota (middleware
   `HMAC_SECRET`). _Detalhes completos na secção de auditoria._
 - **Pseudónimos:** o histórico mostra `Licitante #XXXXXX`, derivado por HMAC de
   (utilizador, lote). Nunca expõe nome, email ou ID.
+- **Liquidação idempotente:** ao fim do lote, uma única transação bloqueia o lote,
+  debita o vencedor (total e comprometido), credita o leiloeiro, regista os
+  movimentos e emite o comprovante. `settled_at` garante que nunca cobra duas vezes,
+  mesmo com pedidos simultâneos. Lotes sem lances fecham sem vencedor.
+- **Dois gatilhos de liquidação:** um agendador (a cada 10 s) e uma liquidação
+  "preguiçosa" ao ler vitrine, lote, carteira ou arremates. Em hospedagens que
+  adormecem o servidor, o agendador pára, mas a próxima leitura liquida o que estiver vencido.
+- **Movimentos com sinal:** em `wallet_transactions`, depósito e venda são positivos
+  e compra é negativa; a soma dos movimentos de um utilizador é sempre igual ao saldo total.
+- **Comprovante público e anônimo:** link por UUID (não adivinhável), com o vencedor
+  como pseudónimo e o hash final da cadeia de lances.
 
 ## Credenciais de teste (seed)
 

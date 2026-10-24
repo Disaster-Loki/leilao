@@ -9,6 +9,7 @@ import { bidsRouter } from "./modules/bids/bids.routes";
 import { walletRouter } from "./modules/wallet/wallet.routes";
 import { errorHandler, asyncHandler } from "./middleware/error";
 import { externalRouter } from "./modules/external/external.routes";
+import { receiptsRouter, myRouter } from "./modules/receipts/receipts.routes";
 
 export const app = express();
 
@@ -24,12 +25,14 @@ app.get(
   })
 );
 
+app.use("/my", myRouter);
 app.use("/auth", authRouter);
 app.use("/lots", lotsRouter);
 app.use("/lots", bidsRouter);
 app.use("/lots", lotsRouter);
 app.use("/wallet", walletRouter);
 app.use("/wallet", walletRouter);
+app.use("/receipts", receiptsRouter);
 app.use("/external", externalRouter);
 
 // SEMPRE por último

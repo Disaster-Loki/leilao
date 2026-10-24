@@ -1,7 +1,9 @@
 import { pool } from "../../db/pool";
 import { AppError } from "../../middleware/error";
+import { settleDueLots } from "../settlement/settlement.service";
 
 export async function getWallet(userId: string) {
+  await settleDueLots();
   const { rows } = await pool.query(
     "SELECT total_cents, committed_cents FROM wallets WHERE user_id = $1",
     [userId]
