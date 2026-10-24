@@ -1,11 +1,13 @@
-import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import { env } from "./config/env";
+import express from "express";
 import { pool } from "./db/pool";
+import { env } from "./config/env";
 import { authRouter } from "./modules/auth/auth.routes";
-import { errorHandler, asyncHandler } from "./middleware/error";
+import { lotsRouter } from "./modules/lots/lots.routes";
 import { walletRouter } from "./modules/wallet/wallet.routes";
+import { errorHandler, asyncHandler } from "./middleware/error";
+import { externalRouter } from "./modules/external/external.routes";
 
 export const app = express();
 
@@ -22,7 +24,10 @@ app.get(
 );
 
 app.use("/auth", authRouter);
+app.use("/lots", lotsRouter);
 app.use("/wallet", walletRouter);
+app.use("/wallet", walletRouter);
+app.use("/external", externalRouter);
 
 // SEMPRE por último
 app.use(errorHandler);

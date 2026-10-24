@@ -112,6 +112,15 @@ As permissões são verificadas **no servidor** em cada rota (middleware
 - **Código em inglês, interface e documentação em português.**
 - **Senhas** com bcrypt; autenticação por JWT no header `Authorization`.
 - **Validação de entrada** com Zod em todas as rotas.
+- **API externa isolada:** o Art Institute só é consultado na busca do leiloeiro e
+  na criação do lote, onde o servidor guarda um snapshot (título, artista, imagem,
+  atributos). Busca com timeout de 5 s, cache de 5 min e erro `503` claro. Vitrine,
+  sala, lances, auditoria e comprovante nunca dependem da API.
+- **Snapshot feito no servidor:** o front envia só o `externalId`; os dados do item
+  vêm da API, não do cliente.
+- **Cancelamento:** só o dono do lote, e só se não houver lances (`LOT_HAS_BIDS`).
+  Usa o mesmo bloqueio de linha (`FOR UPDATE`) dos lances.
+- Só aparecem na busca obras de domínio público e com imagem.
 
 ## Credenciais de teste (seed)
 
