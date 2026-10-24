@@ -1,0 +1,43 @@
+import { Router } from "express";
+import { z } from "zod";
+import { asyncHandler } from "../../middleware/error";
+import { requireAuth } from "../../middleware/auth";
+import * as service from "./auth.service";
+
+export const authRouter = Router();
+
+const registerSchema = z.object({
+  email: z.string().email(),
+  name: z.string().trim().min(2).max(80),
+  password: z.string().min(6).max(100),
+  role: z.enum(["auctioneer", "bidder"]),
+});
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+authRouter.post(
+  "/register",
+  asyncHandler(async (req, res) => {
+    const input = registerSchema.parse(req.body);
+    res.status(201).json(await service.register(input));
+  })
+);
+
+authRouter.post(
+  "/login",
+  asyncHandler(async (req, res) => {
+    const { email, password } = loginSchema.parse(req.body);
+    res.json(await service.login(email, password));
+  })
+);
+
+authRouter.get(
+  "/me",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    res.json(await service.getMe(req.user!.id));
+  })
+);
