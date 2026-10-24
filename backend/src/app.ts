@@ -5,6 +5,7 @@ import { pool } from "./db/pool";
 import { env } from "./config/env";
 import { authRouter } from "./modules/auth/auth.routes";
 import { lotsRouter } from "./modules/lots/lots.routes";
+import { bidsRouter } from "./modules/bids/bids.routes";
 import { walletRouter } from "./modules/wallet/wallet.routes";
 import { errorHandler, asyncHandler } from "./middleware/error";
 import { externalRouter } from "./modules/external/external.routes";
@@ -24,6 +25,8 @@ app.get(
 );
 
 app.use("/auth", authRouter);
+app.use("/lots", lotsRouter);
+app.use("/lots", bidsRouter);
 app.use("/lots", lotsRouter);
 app.use("/wallet", walletRouter);
 app.use("/wallet", walletRouter);

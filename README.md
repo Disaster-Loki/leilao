@@ -121,6 +121,17 @@ As permissões são verificadas **no servidor** em cada rota (middleware
 - **Cancelamento:** só o dono do lote, e só se não houver lances (`LOT_HAS_BIDS`).
   Usa o mesmo bloqueio de linha (`FOR UPDATE`) dos lances.
 - Só aparecem na busca obras de domínio público e com imagem.
+- **Lances atômicos:** cada lance corre numa transação PostgreSQL que bloqueia o
+  lote (`SELECT ... FOR UPDATE`) e depois as carteiras envolvidas, sempre por ordem
+  de id (evita deadlock). Validação, saldo comprometido, gravação do lance e
+  prorrogação acontecem na mesma transação. A hora do lance vem do relógio do banco
+  (`clock_timestamp()`), nunca do cliente.
+- **Anti-sniping:** lance aceito com 2 min ou menos para o fim move o fim para
+  `agora + 2 min`.
+- **Cadeia de hashes:** cada lance guarda `prev_hash` e `hash` (HMAC-SHA256 com
+  `HMAC_SECRET`). _Detalhes completos na secção de auditoria._
+- **Pseudónimos:** o histórico mostra `Licitante #XXXXXX`, derivado por HMAC de
+  (utilizador, lote). Nunca expõe nome, email ou ID.
 
 ## Credenciais de teste (seed)
 

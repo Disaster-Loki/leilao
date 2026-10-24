@@ -35,3 +35,17 @@ export const requireRole =
     if (req.user?.role !== role) throw new AppError(403, "FORBIDDEN");
     next();
   };
+
+  // Não exige login, mas se houver token válido preenche req.user
+export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+  if (header?.startsWith("Bearer ")) {
+    try {
+      const payload = jwt.verify(header.slice(7), env.JWT_SECRET) as AuthUser;
+      req.user = { id: payload.id, role: payload.role };
+    } catch {
+      // token inválido numa rota pública: trata como visitante
+    }
+  }
+  next();
+}

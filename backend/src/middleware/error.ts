@@ -5,9 +5,9 @@ export class AppError extends Error {
   constructor(
     public status: number,
     public code: string,
-    message?: string
+    public details?: Record<string, unknown>
   ) {
-    super(message ?? code);
+    super(code);
   }
 }
 
@@ -18,7 +18,7 @@ export function errorHandler(
   _next: NextFunction
 ) {
   if (err instanceof AppError) {
-    return res.status(err.status).json({ error: err.code });
+    return res.status(err.status).json({ error: err.code, ...(err.details ? { details: err.details } : {}) });
   }
   if (err instanceof ZodError) {
     return res.status(400).json({ error: "VALIDATION_ERROR", details: err.issues });
