@@ -115,7 +115,13 @@ As permissões são verificadas **no servidor** em cada rota (middleware
 
 ## Credenciais de teste (seed)
 
-_A preencher quando o seed estiver pronto._
+Rodar `npm run seed` na pasta `backend`. Senha de todos: `123456`.
+
+| Papel | Email | Saldo inicial |
+|---|---|---|
+| Leiloeiro | leiloeiro@leilao.com | 0,00 |
+| Licitante | ana@leilao.com | 5.000,00 |
+| Licitante | bruno@leilao.com | 5.000,00 |
 
 ## Histórico à prova de adulteração
 
