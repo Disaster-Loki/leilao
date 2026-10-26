@@ -419,8 +419,10 @@ O projeto seguiu um plano estruturado:
 
 ## Deploy
 
-> ⚠️ **Ainda não está publicado.** A configuração está pronta; falta executar o
-> deploy e substituir esta nota pelas URLs finais.
+**Aplicação publicada:**
+- Front-end: https://leilao-lemon.vercel.app
+- API: https://leilao-eof8.onrender.com
+- Health check: https://leilao-eof8.onrender.com/health
 
 O repositório inclui `render.yaml` (Render Blueprint) e
 `frontend/vercel.json`, por isso não é necessário criar Dockerfiles.
@@ -444,9 +446,9 @@ O repositório inclui `render.yaml` (Render Blueprint) e
   `frontend/vercel.json` já usa `npm ci`, `npm run build`, output `dist` e o
   rewrite `/* → /index.html` para o React Router.
 - Variável de ambiente (Production e Preview): `API_URL` = URL pública do
-  Render. É uma variável de build; depois de a criar, faça novo deploy.
+  Render (`https://leilao-eof8.onrender.com`). É uma variável de build; depois
+  de a criar ou alterar, faça novo deploy.
+- No Render, `FRONTEND_URL` = `https://leilao-lemon.vercel.app` (o backend
+  normaliza a origem, por isso pode incluir path ou barra final).
 - O `vite.config.ts` expõe o prefixo `API_` ao browser, por isso não é preciso
   `VITE_API_URL`. Nunca uses este prefixo para segredos.
-
-Depois do deploy, confirme `GET /health`, faça login com as contas do seed e
-copie as duas URLs para este README.
