@@ -96,6 +96,10 @@ export function errorMessage(e: unknown): string {
       return "Obra não encontrada na API externa.";
     case "NETWORK_ERROR":
       return "Sem conexão com o servidor. Tente novamente.";
+    case "API_NOT_CONFIGURED":
+      return "A URL da API não está configurada neste deploy.";
+    case "INVALID_RESPONSE":
+      return "O servidor devolveu uma resposta inválida. Verifique a URL da API.";
     default:
       return "Ocorreu um erro inesperado.";
   }

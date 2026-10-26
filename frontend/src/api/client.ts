@@ -1,4 +1,4 @@
-const API = import.meta.env.VITE_API_URL as string;
+const API = import.meta.env.VITE_API_URL as string | undefined;
 
 export interface ApiError {
   error: string;
@@ -7,6 +7,8 @@ export interface ApiError {
 }
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
+  if (!API) throw { error: "API_NOT_CONFIGURED" } as ApiError;
+
   const token = localStorage.getItem("token");
   let res: Response;
   try {
@@ -21,8 +23,25 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   } catch {
     throw { error: "NETWORK_ERROR" } as ApiError;
   }
+
   if (res.status === 204) return undefined as T;
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw (data?.error ? data : { error: "INTERNAL_ERROR" }) as ApiError;
+
+  const text = await res.text();
+  let data: unknown = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw { error: "INVALID_RESPONSE" } as ApiError;
+    }
+  }
+
+  if (!res.ok) {
+    if (data && typeof data === "object" && "error" in data) {
+      throw data as ApiError;
+    }
+    throw { error: "INTERNAL_ERROR" } as ApiError;
+  }
+
   return data as T;
 }

@@ -108,7 +108,7 @@ export default function Showcase() {
   const allLots = useMemo(
     () =>
       data
-        ? [...data.live, ...data.scheduled, ...data.ended]
+        ? [...(data.live ?? []), ...(data.scheduled ?? []), ...(data.ended ?? [])]
         : [],
     [data]
   );
@@ -116,9 +116,9 @@ export default function Showcase() {
   const counts = useMemo(
     () => ({
       all: allLots.length,
-      live: data?.live.length ?? 0,
-      scheduled: data?.scheduled.length ?? 0,
-      ended: data?.ended.length ?? 0,
+      live: data?.live?.length ?? 0,
+      scheduled: data?.scheduled?.length ?? 0,
+      ended: data?.ended?.length ?? 0,
     }),
     [allLots.length, data]
   );
