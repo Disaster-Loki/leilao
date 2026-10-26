@@ -7,14 +7,19 @@ import * as service from "./auth.service";
 export const authRouter = Router();
 
 const registerSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   name: z.string().trim().min(2).max(80),
-  password: z.string().min(6).max(100),
+  password: z
+    .string()
+    .min(8, "A senha deve ter pelo menos 8 caracteres")
+    .max(100)
+    .regex(/[a-zA-Z]/, "A senha deve conter pelo menos uma letra")
+    .regex(/[0-9]/, "A senha deve conter pelo menos um número"),
   role: z.enum(["auctioneer", "bidder"]),
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1),
 });
 
