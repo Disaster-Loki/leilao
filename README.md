@@ -40,7 +40,7 @@ leilao/
 │       └── main.tsx           providers e router
 ├── docker-compose.yml         PostgreSQL + migrate/seed + API + front-end
 ├── render.yaml                blueprint do back-end no Render
-├── vercel.json                build e rewrites do front-end no Vercel
+├── frontend/vercel.json      build e rewrites do front-end no Vercel
 └── README.md
 ```
 
@@ -436,10 +436,12 @@ não é necessário criar Dockerfiles.
   `HMAC_SECRET` (gerados) e `FRONTEND_URL` (URL do Vercel).
 
 **Front-end no Vercel:**
-- Importe o mesmo repositório com o root na raiz.
-- O `vercel.json` já define instalação/build em `frontend/`, output `frontend/dist`
-  e o rewrite `/* → /index.html` para o React Router.
-- Variável de ambiente: `VITE_API_URL` = URL pública do Render.
+- Importe o mesmo repositório com **Root Directory = `frontend`**.
+- Não defina Install/Build/Output manualmente no dashboard: o
+  `frontend/vercel.json` já usa `npm ci`, `npm run build`, output `dist` e o
+  rewrite `/* → /index.html` para o React Router.
+- Variável de ambiente (Production e Preview): `VITE_API_URL` = URL pública do
+  Render. É uma variável de build; depois de a criar, faça novo deploy.
 
 Depois do deploy, confirme `GET /health`, faça login com as contas do seed e
 copie as duas URLs para este README.
