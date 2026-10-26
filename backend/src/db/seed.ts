@@ -86,8 +86,14 @@ async function seed() {
     const endAt = new Date(now.getTime() + 2 * 60 * 60 * 1000); // +2 horas
 
     // Artwork snapshot da API do Art Institute (Claude Monet - Water Lilies)
+    // Só reutiliza um lote que ainda esteja aberto; se o anterior já terminou,
+    // cria um novo para o avaliador ter sempre um leilão ao vivo com lances.
     const { rows: existingLot } = await client.query(
-      "SELECT id FROM lots WHERE external_id = $1 AND auctioneer_id = $2",
+      `SELECT id FROM lots
+       WHERE external_id = $1 AND auctioneer_id = $2
+         AND cancelled_at IS NULL AND settled_at IS NULL AND end_at > now()
+       ORDER BY created_at DESC
+       LIMIT 1`,
       ["16568", auctioneerId]
     );
 
@@ -196,7 +202,7 @@ async function seed() {
     }
 
     await client.query("COMMIT");
-    console.log("\n✅ Seed concluído.\n");
+    console.log("\nSeed concluído.\n");
     console.log("Credenciais (senha: Leilao@123):");
     console.log("  Leiloeiro: leiloeiro@leilao.com");
     console.log("  Licitante: ana@leilao.com");

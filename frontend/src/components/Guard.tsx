@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import type { ReactNode } from "react";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/auth-context";
 import type { Role } from "../types";
 
 interface Props {

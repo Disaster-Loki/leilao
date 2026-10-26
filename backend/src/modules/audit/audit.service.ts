@@ -1,10 +1,9 @@
 import { pool } from "../../db/pool";
 import { AppError } from "../../middleware/error";
-import { computeBidHash, GENESIS, pseudonym } from "../bids/hash";
+import { pseudonym } from "../bids/hash";
 import { STATUS_SQL } from "../lots/lots.service";
 import { settleDueLots } from "../settlement/settlement.service";
-
-type Issue = { sequence: number | null; code: string };
+import { verifyBidChain } from "./verify";
 
 export async function auditLot(lotId: string) {
   await settleDueLots();
@@ -49,47 +48,7 @@ export async function auditLot(lotId: string) {
     client.release();
   }
 
-  const issues: Issue[] = [];
-
-  // 1. Recalcula a cadeia inteira
-  let prev = GENESIS;
-  bids.forEach((b, i) => {
-    if (b.sequence !== i + 1) issues.push({ sequence: b.sequence, code: "SEQUENCE_GAP" });
-    if (b.prev_hash !== prev) issues.push({ sequence: b.sequence, code: "PREV_HASH_MISMATCH" });
-    const expected = computeBidHash({
-      prevHash: b.prev_hash,
-      lotId,
-      sequence: b.sequence,
-      bidderId: b.bidder_id,
-      amountCents: Number(b.amount_cents),
-      createdAt: b.created_at,
-    });
-    if (expected !== b.hash) issues.push({ sequence: b.sequence, code: "HASH_MISMATCH" });
-    prev = b.hash;
-  });
-
-  // 2. Compara com o que o lote guardou (apanha remoção do último lance)
-  const last = bids[bids.length - 1];
-  if (prev !== lot.head_hash) issues.push({ sequence: null, code: "HEAD_HASH_MISMATCH" });
-  if (bids.length !== lot.bid_count) issues.push({ sequence: null, code: "BID_COUNT_MISMATCH" });
-  if (last) {
-    if (Number(last.amount_cents) !== Number(lot.current_bid_cents))
-      issues.push({ sequence: last.sequence, code: "CURRENT_BID_MISMATCH" });
-    if (last.bidder_id !== lot.leader_id)
-      issues.push({ sequence: last.sequence, code: "LEADER_MISMATCH" });
-  }
-
-  // 3. Compara com o comprovante e com o movimento financeiro
-  if (lot.settled_at && bids.length > 0) {
-    if (!receipt) issues.push({ sequence: null, code: "RECEIPT_MISSING" });
-    else {
-      if (receipt.final_hash !== prev) issues.push({ sequence: null, code: "RECEIPT_HASH_MISMATCH" });
-      if (last && Number(receipt.amount_cents) !== Number(last.amount_cents))
-        issues.push({ sequence: null, code: "RECEIPT_AMOUNT_MISMATCH" });
-    }
-    if (!sale || (last && Number(sale.amount_cents) !== Number(last.amount_cents)))
-      issues.push({ sequence: null, code: "SETTLEMENT_MISMATCH" });
-  }
+  const issues = verifyBidChain({ lotId, lot, bids, receipt, sale });
 
   return {
     lotId,

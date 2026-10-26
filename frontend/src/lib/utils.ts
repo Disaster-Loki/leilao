@@ -64,8 +64,6 @@ export function errorMessage(e: unknown): string {
       return "Este lote já foi encerrado.";
     case "LOT_NOT_FOUND":
       return "Lote não encontrado.";
-    case "LOT_HAS_BIDS":
-      return "Não é possível cancelar um lote já encerrado com arremate.";
     case "LOT_ALREADY_CANCELLED":
       return "Este lote já foi cancelado.";
     case "LOT_ALREADY_SETTLED":

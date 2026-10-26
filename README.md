@@ -21,6 +21,7 @@ lote com lances ao vivo, usando saldo simulado.
 leilao/
 ├── backend/
 │   ├── migrations/            migrations SQL versionadas (node-pg-migrate)
+│   ├── test/                  testes de integração (node:test + PostgreSQL)
 │   └── src/
 │       ├── config/            leitura e validação das variáveis de ambiente
 │       ├── db/                pool, reset, seed idempotente
@@ -28,18 +29,18 @@ leilao/
 │       ├── modules/           um módulo por domínio: auth, wallet, lots,
 │       │                      bids, settlement, receipts, audit, external
 │       ├── app.ts             composição do Express (CORS, helmet, rotas)
-│       └── server.ts          arranque, agendador de liquidação e graceful stop
+│       └── server.ts          arranque, agendador, liquidação e shutdown
 ├── frontend/
 │   └── src/
 │       ├── api/               cliente HTTP tipado e tratamento de erros
 │       ├── auth/              contexto de sessão (login/registo/logout)
 │       ├── components/        navbar, cards, countdown, tema e UI reutilizável
-│       ├── i18n/              tradução dos códigos de erro da API
-│       ├── lib/               utilitários, proxy de imagens e tema
+│       ├── lib/               utilitários, proxy de imagens, tema e relógio
 │       ├── pages/             uma página por rota do produto
 │       └── main.tsx           providers e router
 ├── docker-compose.yml         PostgreSQL + migrate/seed + API + front-end
-├── run_tests.sh               testes de integração da API (curl + jq)
+├── render.yaml                blueprint do back-end no Render
+├── vercel.json                build e rewrites do front-end no Vercel
 └── README.md
 ```
 
@@ -51,9 +52,9 @@ leilao/
   envolve saldo, lances ou liquidação.
 - **Front-end por página + componentes reutilizáveis:** as páginas representam as
   rotas; a lógica transversal (sessão, cliente HTTP, tema, formatação) vive em
-  `auth`, `api`, `lib` e `i18n`. Não há estado global além da sessão e do tema.
-- **Configuração por ambiente:** segredos e URLs vêm de `.env`; o repositório só
-  versiona `.env.example`.
+  `auth`, `api` e `lib`. Não há estado global além da sessão e do tema.
+- **Configuração por ambiente:** segredos e URLs vêm de `.env`; o repositório
+  versiona apenas `.env.example` e `.env.test` (este último só com valores de teste).
 - **Evolução da base de dados:** migrations versionadas em `backend/migrations`,
   script de reset para desenvolvimento e seed idempotente com dados de teste.
 - **Fronteira com a API externa:** o navegador nunca chama o Art Institute
@@ -62,7 +63,7 @@ leilao/
 
 ## Pré-requisitos
 
-- Node.js 20 ou superior
+- Node.js 22 ou superior
 - PostgreSQL 14 ou superior
 - Git
 
@@ -78,10 +79,13 @@ git clone <url-do-repo> && cd leilao
 docker compose up
 ```
 
-O serviço `migrate` apaga o schema `public` antes de migrar e semear, por isso
-cada `docker compose up` começa com a base de dados limpa.
+O Compose usa apenas imagens oficiais (`postgres:16-alpine` e `node:22-alpine`);
+não há Dockerfiles no repositório. O serviço `migrate` apaga o schema `public`
+antes de migrar e semear, por isso cada `docker compose up` começa com a base de
+dados limpa. O PostgreSQL fica exposto no host em **5433** para não colidir com
+uma instalação local na 5432.
 
-Aguarde até ver `✅ Seed concluído` no log do serviço `migrate`. Depois abra:
+Aguarde até ver `Seed concluído.` no log do serviço `migrate`. Depois abra:
 
 | Serviço | URL |
 |---|---|
@@ -209,6 +213,10 @@ As permissões são verificadas **no servidor** em cada rota (middleware
 - **Cancelamento:** só o dono do lote e só antes de liquidado. Usa o mesmo
   bloqueio de linha (`FOR UPDATE`) dos lances. Se já houver líder, o valor
   comprometido é libertado (volta ao disponível) na mesma transação.
+- **Republicação de obras:** o enunciado não impede voltar a leiloar uma obra
+  já arrematada, por isso não existe regra extra de bloqueio. A busca e a criação
+  continuam a liquidar primeiro os lotes vencidos, para o estado da vitrine estar
+  sempre atualizado.
 - Só aparecem na busca obras de domínio público e com imagem.
 - **Lances atômicos:** cada lance corre numa transação PostgreSQL que bloqueia o
   lote (`SELECT ... FOR UPDATE`) e depois as carteiras envolvidas, sempre por ordem
@@ -243,36 +251,48 @@ Rodar `npm run seed` na pasta `backend`.
 | Licitante | ana@leilao.com | `Leilao@123` |
 | Licitante | bruno@leilao.com | `Leilao@123` |
 
-O seed cria automaticamente um **lote ao vivo (Water Lilies — Monet)** com 3 lances já feitos (Ana está ganhando), para que o avaliador possa percorrer o fluxo completo sem montar nada do zero. O seed é **idempotente**: pode ser executado várias vezes sem duplicar dados.
+O seed cria automaticamente um **lote ao vivo (Water Lilies — Monet)** com 3 lances já feitos (Ana está ganhando), para que o avaliador possa percorrer o fluxo completo sem montar nada do zero. Pode ser executado várias vezes: se o lote ainda estiver aberto, reutiliza-o; se já tiver terminado, cria um novo lote ao vivo com os mesmos dados.
 
 Após o seed, os URLs do lote e da auditoria são impressos no terminal.
 
-## Testes de integração (`run_tests.sh`)
+## Testes automatizados
 
-Pré-requisitos: API a correr e `curl` + `jq` instalados. O script cria os seus
-próprios utilizadores e lotes de teste e pode ser executado com a base semeada.
-
-Cobre 12 categorias, 44 verificações:
-
-| Categoria | O que testa |
-|---|---|
-| Auth | Registo, login, senha fraca, email inválido, email duplicado, credenciais erradas |
-| Carteira | Consulta, depósito, depósito negativo, leiloeiro proibido de depositar |
-| API externa | Busca por obra na Art Institute API |
-| Lotes | Criar (agendado e ao vivo), licitante proibido, cancelamento, cancelado fora da vitrine |
-| Lances | Mínimo, auto-lance, saldo insuficiente, incremental, leiloeiro proibido |
-| Saldo | Comprometido correto, devolvido ao ser superado |
-| Cancelamento com estorno | Comprometido libertado e disponível reposto após cancelar lote com lances |
-| Sala | Status ao vivo, histórico de lances |
-| Arremates | Listagem pessoal |
-| Auditoria | Cadeia de hashes íntegra |
-| Segurança | 4 rotas protegidas sem token |
+Os testes vivem no backend e usam o runner nativo `node:test`. Não é preciso
+navegador, `curl` ou `jq`.
 
 ```bash
-# a partir da raiz do repositório, com a API já a correr
-chmod +x run_tests.sh
-BASE_URL=http://localhost:3000 ./run_tests.sh
+cd backend
+
+npm test                  # 16 testes unitários (hash da cadeia + verificação)
+npm run test:integration  # 11 testes de integração contra PostgreSQL real
+npm run test:all          # ambos
 ```
+
+Os testes unitários não precisam de base de dados. Os de integração leem
+`backend/.env.test`, **apagam e recriam o schema `public`** da base indicada e
+recusam correr se o nome da base não contiver `test`. Crie a base uma vez:
+
+```bash
+sudo -u postgres psql -c "CREATE DATABASE leilao_test OWNER leilao;"
+# ou, se o utilizador já tiver permissão:
+createdb -h localhost -U leilao leilao_test
+```
+
+O HTTP para `api.artic.edu` é simulado nos testes, por isso correm offline e de
+forma determinística; a base de dados é real.
+
+| Categoria | O que cobre |
+|---|---|
+| Auth e papéis | Registo, duplicado, login errado, `/auth/me`, bloqueio de rotas por papel |
+| API externa | Busca autenticada e falha `503` isolada sem derrubar a vitrine |
+| Lotes | Criação agendada/ao vivo, lance antes da hora, cancelamento e ocultação |
+| Lances | Primeiro lance, incremento, auto-lance, saldo e superação |
+| Carteira | Total, comprometido e disponível após lances, estorno e liquidação |
+| Sala | Histórico, posição do licitante e pseudónimos sem dados pessoais |
+| Liquidação | Débito/crédito, lote sem lances, comprovante público e cancelamento bloqueado |
+| Anti-sniping | Prorrogação de +2 min no fim do lote |
+| Auditoria | Cadeia íntegra e deteção de alteração direta no banco |
+| Republicação | A mesma obra pode ser publicada outra vez, como o enunciado permite |
 
 ## Histórico à prova de adulteração
 
@@ -306,7 +326,7 @@ simultâneo não cause um falso alarme.
 
 | Requisito obrigatório | Estado / onde está |
 |---|---|
-| Deploy público | ⚠️ **Ainda não publicado.** Instruções em [Deploy](#deploy); falta escolher os serviços e preencher as URLs |
+| Deploy público | ⚠️ **Ainda não publicado.** Configuração pronta em [Deploy](#deploy); falta executar o deploy e colar as URLs |
 | Dois papéis (leiloeiro/licitante) | ✅ Registo com escolha de papel; permissões verificadas no servidor |
 | Vitrine com ao vivo/agendados/encerrados | ✅ `/` — cancelados nunca aparecem |
 | Painel do leiloeiro | ✅ `/panel` — busca na API, cria/cancela lotes e vê resultados |
@@ -328,7 +348,7 @@ simultâneo não cause um falso alarme.
 | Busca e filtro de lotes | ✅ | Pesquisa por título/artista/técnica, filtros por estado e ordenação por fim/preço/data |
 | Cancelamento com estorno automático | ✅ | O leiloeiro cancela lotes ainda não liquidados; o valor comprometido do líder volta a ficar disponível |
 | Docker Compose | ✅ | `docker compose up` sobe PostgreSQL, reset/migração/seed, API e front-end |
-| Testes automatizados | ✅ | `run_tests.sh` versionado — 12 categorias, 44 verificações de integração |
+| Testes automatizados | ✅ | 16 unitários + 11 de integração no backend (`node:test`, PostgreSQL real e API externa simulada) |
 | Dark Mode | ✅ | Toggle no navbar em todas as páginas (incluindo login); preferência guardada em `localStorage` |
 
 ## Limitações e comportamentos conhecidos
@@ -343,7 +363,7 @@ simultâneo não cause um falso alarme.
 
 ## Uso de inteligência artificial
 
-O desenvolvimento foi feito em **duas fases** com abordagens distintas:
+O desenvolvimento foi feito em **três fases** com abordagens distintas:
 
 ### Fase 1 — Back-end (feito manualmente)
 
@@ -374,6 +394,14 @@ estabelecidos. A IA:
 Toda a lógica crítica (hooks de polling, countdown sincronizado com o servidor,
 deteção de prorrogação anti-sniping) foi revisada e ajustada pelo desenvolvedor.
 
+### Fase 3 — Revisão, testes e endurecimento (com IA)
+
+A revisão final foi feita com apoio do assistente: auditoria contra o enunciado,
+correção do bug de lotes cancelados em “Meus arremates”, extração da verificação
+de auditoria, testes unitários e de integração, limpeza de artefactos não pedidos
+e pequenos ajustes de acessibilidade/identidade visual. Todas as alterações foram
+executadas e verificadas localmente (`lint`, `build`, testes e smoke tests).
+
 ### Plano de desenvolvimento
 
 O projeto seguiu um plano estruturado:
@@ -387,30 +415,31 @@ O projeto seguiu um plano estruturado:
 7. Liquidação e comprovante
 8. Auditoria pública
 9. Front-end (com IA): componentes, páginas, design
-10. Build de produção, testes e documentação
+10. Build de produção, testes, deploy e documentação
 
 ## Deploy
 
-> ⚠️ **Ainda não está publicado.** O deploy é obrigatório no enunciado e é o
-> próximo passo pendente. O README já deixa a configuração necessária para o
-> fazer; depois de publicado, substituir esta nota pelas URLs finais.
+> ⚠️ **Ainda não está publicado.** A configuração está pronta; falta executar o
+> deploy e substituir esta nota pelas URLs finais.
 
-**Opções recomendadas:**
+O repositório inclui `render.yaml` (Render Blueprint) e `vercel.json`, por isso
+não é necessário criar Dockerfiles.
 
-| Serviço | Para quê |
-|---|---|
-| [Neon](https://neon.tech) | PostgreSQL serverless (free tier) |
-| [Render](https://render.com) | Back-end Node.js (free tier, cold start) |
-| [Vercel](https://vercel.com) | Front-end estático (free tier) |
+**Back-end + PostgreSQL no Render:**
+- Importe o repositório como Blueprint; o `render.yaml` cria o serviço Node 22 e
+  a base PostgreSQL.
+- Root directory: `backend`
+- Build: `npm ci --include=dev && npm run build`
+- Start: `npm run start:deploy` (migra, corre o seed idempotente e arranca a API)
+- Health check: `/health`
+- Variáveis: `DATABASE_URL` (ligada ao banco do blueprint), `JWT_SECRET`,
+  `HMAC_SECRET` (gerados) e `FRONTEND_URL` (URL do Vercel).
 
-**Configuração do back-end no Render:**
-- Build command: `npm install && npm run build`
-- Start command: `npm run start`
-- Variáveis de ambiente: `DATABASE_URL`, `JWT_SECRET`, `HMAC_SECRET`, `FRONTEND_URL`, `PORT`
+**Front-end no Vercel:**
+- Importe o mesmo repositório com o root na raiz.
+- O `vercel.json` já define instalação/build em `frontend/`, output `frontend/dist`
+  e o rewrite `/* → /index.html` para o React Router.
+- Variável de ambiente: `VITE_API_URL` = URL pública do Render.
 
-**Configuração do front-end no Vercel:**
-- Framework preset: `Vite`
-- Build command: `npm run build`
-- Output directory: `dist`
-- Variável de ambiente: `VITE_API_URL` (URL do back-end no Render)
-- Rewrites: `/* → /index.html` (para o React Router funcionar)
+Depois do deploy, confirme `GET /health`, faça login com as contas do seed e
+copie as duas URLs para este README.

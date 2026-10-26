@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/auth-context";
 import {
   errorMessage,
   formatMoney,
@@ -13,14 +13,15 @@ import {
 import type { Room, Wallet } from "../types";
 import Countdown from "../components/Countdown";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
+import Icon from "../components/Icon";
 
 const CONFETTI_COLORS = [
-  "#6366f1",
-  "#a855f7",
-  "#22c55e",
-  "#f59e0b",
-  "#ef4444",
-  "#38bdf8",
+  "#d4a55e",
+  "#a83e46",
+  "#88b07e",
+  "#f1e6d4",
+  "#c4535b",
+  "#b3771f",
 ];
 
 export default function LotRoom() {
@@ -34,55 +35,68 @@ export default function LotRoom() {
   const [notice, setNotice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const lastEndRef = useRef<number | null>(null);
   const lastStatusRef = useRef<string | null>(null);
   const celebratedRef = useRef(false);
   const loadedLotIdRef = useRef<string | null>(null);
   const isBidder = user?.role === "bidder";
 
-  const load = useCallback(async () => {
-    try {
-      const r = await api<Room>(`/lots/${id}/room`);
-      const end = new Date(r.lot.endAt).getTime();
-      if (lastEndRef.current !== null && end > lastEndRef.current) {
-        setNotice("⏱ Prazo prorrogado +2 min (lance nos últimos 2 minutos).");
-      }
-      lastEndRef.current = end;
-
-      if (loadedLotIdRef.current !== r.lot.id) {
-        loadedLotIdRef.current = r.lot.id;
-        lastStatusRef.current = null;
-        celebratedRef.current = false;
-        setCelebrate(false);
-      }
-
-      const previousStatus = lastStatusRef.current;
-      lastStatusRef.current = r.lot.status;
-      if (
-        previousStatus === "live" &&
-        r.lot.status === "ended" &&
-        r.myPosition === "leading" &&
-        !celebratedRef.current
-      ) {
-        celebratedRef.current = true;
-        setCelebrate(true);
-      }
-
-      setRoom(r);
-      setLoadError(null);
-      if (isBidder) {
-        api<Wallet>("/wallet").then(setWallet).catch(() => null);
-      }
-    } catch (e) {
-      setLoadError(errorMessage(e));
-    }
-  }, [id, isBidder]);
-
   useEffect(() => {
-    load();
-    const t = setInterval(load, 2000);
-    return () => clearInterval(t);
-  }, [load]);
+    let cancelled = false;
+
+    async function tick() {
+      try {
+        const r = await api<Room>(`/lots/${id}/room`);
+        if (cancelled) return;
+
+        const end = new Date(r.lot.endAt).getTime();
+        if (lastEndRef.current !== null && end > lastEndRef.current) {
+          setNotice("Prazo prorrogado +2 min (lance nos últimos 2 minutos).");
+        }
+        lastEndRef.current = end;
+
+        if (loadedLotIdRef.current !== r.lot.id) {
+          loadedLotIdRef.current = r.lot.id;
+          lastStatusRef.current = null;
+          celebratedRef.current = false;
+          setCelebrate(false);
+        }
+
+        const previousStatus = lastStatusRef.current;
+        lastStatusRef.current = r.lot.status;
+        if (
+          previousStatus === "live" &&
+          r.lot.status === "ended" &&
+          r.myPosition === "leading" &&
+          !celebratedRef.current
+        ) {
+          celebratedRef.current = true;
+          setCelebrate(true);
+        }
+
+        setRoom(r);
+        setLoadError(null);
+
+        if (isBidder) {
+          api<Wallet>("/wallet")
+            .then((w) => {
+              if (!cancelled) setWallet(w);
+            })
+            .catch(() => null);
+        }
+      } catch (e) {
+        if (!cancelled) setLoadError(errorMessage(e));
+      }
+    }
+
+    void tick();
+    const t = setInterval(tick, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [id, isBidder, refreshKey]);
 
   if (loadError && !room) {
     return <p className="msg msg-err center-msg">{loadError}</p>;
@@ -113,12 +127,12 @@ export default function LotRoom() {
         method: "POST",
         body: JSON.stringify({ amountCents: cents }),
       });
-      setFeedback({ ok: true, text: `Lance de ${formatMoney(cents)} aceito! ✓` });
+      setFeedback({ ok: true, text: `Lance de ${formatMoney(cents)} aceito!` });
       setAmount("");
-      load();
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       setFeedback({ ok: false, text: errorMessage(err) });
-      load();
+      setRefreshKey((k) => k + 1);
     } finally {
       setSending(false);
     }
@@ -175,7 +189,7 @@ export default function LotRoom() {
             <dd>{formatDateTime(lot.endAt)}</dd>
           </dl>
           <Link to={`/audit/${lot.id}`} className="audit-link">
-            🔍 Auditar histórico de lances
+            <Icon name="shield" size={15} /> Auditar histórico de lances
           </Link>
         </div>
       </div>
@@ -211,13 +225,13 @@ export default function LotRoom() {
 
           {lot.status === "scheduled" && (
             <div className="msg msg-info">
-              📅 Começa em {formatDateTime(lot.startAt)}
+              <Icon name="clock" size={15} /> Começa em {formatDateTime(lot.startAt)}
             </div>
           )}
           {ended && (
             <div className="msg msg-info">
               {lot.bidCount > 0
-                ? "✅ Lote encerrado e arrematado."
+                ? "Lote encerrado e arrematado."
                 : "Lote encerrado sem lances."}
             </div>
           )}
@@ -225,14 +239,14 @@ export default function LotRoom() {
 
           {/* Posição do utilizador */}
           {myPosition === "leading" && live && (
-            <div className="msg msg-ok">✔ Você está ganhando!</div>
+            <div className="msg msg-ok"><Icon name="check" size={15} /> Você está ganhando!</div>
           )}
           {myPosition === "outbid" && live && (
-            <div className="msg msg-err">✖ Você foi superado</div>
+            <div className="msg msg-err"><Icon name="x" size={15} /> Você foi superado</div>
           )}
           {myPosition === "leading" && ended && (
             <div className="msg msg-ok">
-              🏆 Você venceu! Veja o comprovante em{" "}
+              <Icon name="trophy" size={16} /> Você venceu! Veja o comprovante em{" "}
               <Link to="/my/bids">Meus Arremates</Link>.
             </div>
           )}
@@ -245,7 +259,7 @@ export default function LotRoom() {
             <form onSubmit={submit} className="bid-form">
               {wallet && (
                 <p className="muted wallet-hint">
-                  💰 Disponível: <strong>{formatMoney(wallet.availableCents)}</strong>
+                  <Icon name="wallet" size={15} /> Disponível: <strong>{formatMoney(wallet.availableCents)}</strong>
                 </p>
               )}
               <div className="bid-input-row">
@@ -271,7 +285,7 @@ export default function LotRoom() {
                 className="btn btn-primary btn-block"
                 disabled={sending}
               >
-                {sending ? "Enviando…" : "🔨 Dar Lance"}
+                {sending ? "Enviando…" : <><Icon name="gavel" size={16} /> Dar lance</>}
               </button>
               {feedback && (
                 <div className={feedback.ok ? "msg msg-ok" : "msg msg-err"}>
@@ -353,7 +367,7 @@ export default function LotRoom() {
             ))}
           </div>
           <div className="win-card card">
-            <span className="win-trophy" aria-hidden>🏆</span>
+            <span className="win-trophy" aria-hidden><Icon name="trophy" size={54} /></span>
             <span className="win-kicker">Leilão encerrado</span>
             <h2 id="win-title">Parabéns, venceu o leilão!</h2>
             <p className="muted">

@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { errorMessage, formatMoney, formatDateTime } from "../lib/utils";
 import type { Receipt } from "../types";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
+import Icon from "../components/Icon";
 
 export default function ReceiptPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,7 +23,7 @@ export default function ReceiptPage() {
   return (
     <div className="page-wrap receipt-page">
       <div className="receipt-card card">
-        <div className="receipt-stamp">🏆 Comprovante de Arremate</div>
+        <div className="receipt-stamp"><Icon name="trophy" size={18} /> Comprovante de Arremate</div>
 
         <div className="receipt-lot">
           <img
@@ -69,7 +70,7 @@ export default function ReceiptPage() {
 
         <div className="receipt-actions">
           <Link to={`/audit/${receipt.lotId}`} className="btn btn-primary">
-            🔍 Verificar auditoria
+            <Icon name="shield" size={15} /> Verificar auditoria
           </Link>
           <Link to={`/lots/${receipt.lotId}`} className="btn btn-ghost">
             Ver lote
@@ -81,7 +82,7 @@ export default function ReceiptPage() {
               alert("Link copiado!");
             }}
           >
-            📋 Copiar link
+            <Icon name="receipt" size={15} /> Copiar link
           </button>
         </div>
       </div>

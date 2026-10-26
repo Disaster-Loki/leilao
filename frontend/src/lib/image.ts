@@ -6,12 +6,12 @@ export const PLACEHOLDER =
     `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">
       <defs>
         <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#1f2333"/>
-          <stop offset="1" stop-color="#13161e"/>
+          <stop offset="0" stop-color="#2a201a"/>
+          <stop offset="1" stop-color="#120f0d"/>
         </linearGradient>
       </defs>
       <rect width="100%" height="100%" fill="url(#g)"/>
-      <text x="50%" y="50%" text-anchor="middle" fill="#6b7280" font-family="system-ui" font-size="14">Imagem indisponível</text>
+      <text x="50%" y="50%" text-anchor="middle" fill="#9f8c76" font-family="Georgia,serif" font-size="14">Imagem indisponível</text>
     </svg>`
   );
 

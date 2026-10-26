@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { api } from "../api/client";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/auth-context";
 import { errorMessage, formatMoney, parseMoney } from "../lib/utils";
 import type { Wallet as WalletData } from "../types";
+import Icon from "../components/Icon";
 
 export default function Wallet() {
   const { user } = useAuth();
@@ -32,7 +33,7 @@ export default function Wallet() {
         body: JSON.stringify({ amountCents: cents }),
       });
       setWallet(w);
-      setMsg({ ok: true, text: `Depósito de ${formatMoney(cents)} realizado! ✓` });
+      setMsg({ ok: true, text: `Depósito de ${formatMoney(cents)} realizado!` });
       setAmount("");
     } catch (err) {
       setMsg({ ok: false, text: errorMessage(err) });
@@ -48,16 +49,16 @@ export default function Wallet() {
       ) : wallet ? (
         <div className="wallet-stats">
           <div className="stat-card card">
-            <p className="stat-label muted">Saldo Total</p>
+            <p className="stat-label muted"><Icon name="wallet" size={13} /> Saldo Total</p>
             <p className="stat-value">{formatMoney(wallet.totalCents)}</p>
           </div>
           <div className="stat-card card">
-            <p className="stat-label muted">Comprometido 🔒</p>
+            <p className="stat-label muted"><Icon name="lock" size={13} /> Comprometido</p>
             <p className="stat-value">{formatMoney(wallet.committedCents)}</p>
             <p className="stat-hint muted">Reservado nos seus lances vencedores</p>
           </div>
           <div className="stat-card card stat-card-highlight">
-            <p className="stat-label muted">Disponível ✅</p>
+            <p className="stat-label muted"><Icon name="check" size={13} /> Disponível</p>
             <p className="stat-value">{formatMoney(wallet.availableCents)}</p>
             <p className="stat-hint muted">Pode usar em novos lances</p>
           </div>

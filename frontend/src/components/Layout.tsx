@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/auth-context";
+import Icon from "./Icon";
 import ThemeToggle from "./ThemeToggle";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -127,21 +128,21 @@ export default function Layout() {
             ref={navRef}
           >
             <NavLink to="/" end className={linkClass}>
-              <span className="nav-icon">🖼</span> Vitrine
+              <span className="nav-icon"><Icon name="gallery" size={15} /></span> Vitrine
             </NavLink>
             {user?.role === "auctioneer" && (
               <NavLink to="/panel" className={linkClass}>
-                <span className="nav-icon">🔨</span> Painel
+                <span className="nav-icon"><Icon name="gavel" size={15} /></span> Painel
               </NavLink>
             )}
             {user?.role === "bidder" && (
               <NavLink to="/my/bids" className={linkClass}>
-                <span className="nav-icon">🏆</span> Meus arremates
+                <span className="nav-icon"><Icon name="trophy" size={15} /></span> Meus arremates
               </NavLink>
             )}
             {user && (
               <NavLink to="/wallet" className={linkClass}>
-                <span className="nav-icon">💰</span> Carteira
+                <span className="nav-icon"><Icon name="wallet" size={15} /></span> Carteira
               </NavLink>
             )}
           </nav>
@@ -179,7 +180,7 @@ export default function Layout() {
               aria-label="Abrir menu"
               aria-expanded={menuOpen}
             >
-              {menuOpen ? "✕" : "☰"}
+              {menuOpen ? <Icon name="x" size={17} /> : <Icon name="grid" size={17} />}
             </button>
           </div>
         </div>
@@ -199,30 +200,30 @@ export default function Layout() {
             </div>
           )}
           <NavLink to="/" end className="mobile-link" onClick={() => setMenuOpen(false)}>
-            🖼 Vitrine
+            <Icon name="gallery" size={16} /> Vitrine
           </NavLink>
           {user?.role === "auctioneer" && (
             <NavLink to="/panel" className="mobile-link" onClick={() => setMenuOpen(false)}>
-              🔨 Painel
+              <Icon name="gavel" size={16} /> Painel
             </NavLink>
           )}
           {user?.role === "bidder" && (
             <NavLink to="/my/bids" className="mobile-link" onClick={() => setMenuOpen(false)}>
-              🏆 Meus arremates
+              <Icon name="trophy" size={16} /> Meus arremates
             </NavLink>
           )}
           {user && (
             <NavLink to="/wallet" className="mobile-link" onClick={() => setMenuOpen(false)}>
-              💰 Carteira
+              <Icon name="wallet" size={16} /> Carteira
             </NavLink>
           )}
           {user ? (
             <button className="mobile-link mobile-link-btn" onClick={handleLogout}>
-              🚪 Sair da conta
+              <Icon name="logout" size={16} /> Sair da conta
             </button>
           ) : (
             <NavLink to="/login" className="mobile-link" onClick={() => setMenuOpen(false)}>
-              🔑 Entrar
+              <Icon name="key" size={16} /> Entrar
             </NavLink>
           )}
         </nav>

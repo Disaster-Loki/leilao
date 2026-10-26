@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { errorMessage, formatMoney, formatDateTime } from "../lib/utils";
 import type { MyBid } from "../types";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
+import Icon from "../components/Icon";
 
 export default function MyBids() {
   const [bids, setBids] = useState<MyBid[] | null>(null);
@@ -19,10 +20,10 @@ export default function MyBids() {
   if (!bids) return <p className="muted center-msg">Carregando…</p>;
 
   const resultLabel: Record<string, string> = {
-    leading: "🟢 Ganhando",
-    outbid: "🔴 Superado",
-    won: "🏆 Vencedor",
-    lost: "❌ Não venceu",
+    leading: "Ganhando",
+    outbid: "Superado",
+    won: "Vencedor",
+    lost: "Não venceu",
   };
 
   return (
@@ -30,7 +31,7 @@ export default function MyBids() {
       <h1>Meus Arremates</h1>
       {bids.length === 0 ? (
         <div className="empty-state">
-          <p className="empty-icon">🔍</p>
+          <p className="empty-icon"><Icon name="search" size={40} /></p>
           <p>Você ainda não deu nenhum lance.</p>
           <Link to="/" className="btn btn-primary" style={{ marginTop: "1rem" }}>
             Ver vitrine
@@ -77,14 +78,14 @@ export default function MyBids() {
                     to={`/receipts/${b.receiptId}`}
                     className="btn btn-primary btn-sm"
                   >
-                    🧾 Comprovante
+                    <Icon name="receipt" size={15} /> Comprovante
                   </Link>
                 )}
                 <Link
                   to={`/audit/${b.lotId}`}
                   className="btn btn-ghost btn-sm"
                 >
-                  🔍 Auditoria
+                  <Icon name="shield" size={15} /> Auditoria
                 </Link>
               </div>
             </div>

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
-import { errorMessage, formatMoney, formatDateTime } from "../lib/utils";
+import { errorMessage, formatMoney, formatDateTime, parseMoney } from "../lib/utils";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
+import Icon from "../components/Icon";
 import type { ArtworkResult, Lot } from "../types";
 
 interface PanelData {
@@ -22,6 +23,7 @@ export default function AuctioneerPanel() {
   const [lotMsg, setLotMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [cancelMsg, setCancelMsg] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const createPanelRef = useRef<HTMLDivElement>(null);
 
   // Criar lote: campos
@@ -38,18 +40,23 @@ export default function AuctioneerPanel() {
     return d.toISOString().slice(0, 16);
   });
 
-  const load = useCallback(async () => {
-    try {
-      const d = await api<PanelData>("/lots/mine");
-      setData(d);
-    } catch {
-      /* ignora erros de refresh */
-    }
-  }, []);
-
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+
+    async function tick() {
+      try {
+        const d = await api<PanelData>("/lots/mine");
+        if (!cancelled) setData(d);
+      } catch {
+        /* ignora erros de refresh */
+      }
+    }
+
+    void tick();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
 
   async function searchArtworks(e: FormEvent) {
     e.preventDefault();
@@ -79,20 +86,13 @@ export default function AuctioneerPanel() {
     }, 60);
   }
 
-  function parseCents(s: string): number | null {
-    const v = s.trim().replace(/\./g, "").replace(",", ".");
-    if (!/^\d+(\.\d{1,2})?$/.test(v)) return null;
-    const [int, dec = ""] = v.split(".");
-    return Number(int) * 100 + Number((dec + "00").slice(0, 2));
-  }
-
   async function createLot(e: FormEvent) {
     e.preventDefault();
     if (!selected) return;
     setLotError(null);
     setLotMsg(null);
-    const startPriceCents = parseCents(startPrice);
-    const minIncrementCents = parseCents(minIncrement);
+    const startPriceCents = parseMoney(startPrice);
+    const minIncrementCents = parseMoney(minIncrement);
     if (!startPriceCents || !minIncrementCents) {
       setLotError("Verifique os valores de preço e incremento.");
       return;
@@ -109,10 +109,10 @@ export default function AuctioneerPanel() {
           endAt: new Date(endAt).toISOString(),
         }),
       });
-      setLotMsg(`Lote "${selected.title}" criado com sucesso! ✓`);
+      setLotMsg(`Lote "${selected.title}" criado com sucesso!`);
       setSelected(null);
       setResults(null);
-      load();
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       setLotError(errorMessage(err));
     } finally {
@@ -129,17 +129,17 @@ export default function AuctioneerPanel() {
     try {
       await api(`/lots/${lotId}/cancel`, { method: "POST" });
       setCancelMsg(`Lote "${title}" cancelado${bidCount > 0 ? " — estorno realizado." : "."}`);
-      load();
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       setCancelMsg(errorMessage(err));
     }
   }
 
   const statusLabel: Record<string, string> = {
-    live: "🔴 Ao vivo",
-    scheduled: "📅 Agendado",
-    ended: "✅ Encerrado",
-    cancelled: "❌ Cancelado",
+    live: "Ao vivo",
+    scheduled: "Agendado",
+    ended: "Encerrado",
+    cancelled: "Cancelado",
   };
 
   const liveCount = data?.lots.filter((l) => l.status === "live").length ?? 0;
@@ -164,19 +164,19 @@ export default function AuctioneerPanel() {
       {data && (
         <div className="stat-strip">
           <div className="stat-mini card">
-            <span className="stat-mini-icon">🗂</span>
+            <span className="stat-mini-icon"><Icon name="gallery" size={17} /></span>
             <div><strong>{data.lots.length}</strong><span>lotes no total</span></div>
           </div>
           <div className="stat-mini card">
-            <span className="stat-mini-icon">🔴</span>
+            <span className="stat-mini-icon"><Icon name="dot" size={17} /></span>
             <div><strong>{liveCount}</strong><span>ao vivo</span></div>
           </div>
           <div className="stat-mini card">
-            <span className="stat-mini-icon">📅</span>
+            <span className="stat-mini-icon"><Icon name="clock" size={17} /></span>
             <div><strong>{scheduledCount}</strong><span>agendados</span></div>
           </div>
           <div className="stat-mini card">
-            <span className="stat-mini-icon">💵</span>
+            <span className="stat-mini-icon"><Icon name="wallet" size={17} /></span>
             <div>
               <strong className="ok-text">{formatMoney(data.totalReceivedCents)}</strong>
               <span>recebido ({endedCount} encerrados)</span>
@@ -199,7 +199,7 @@ export default function AuctioneerPanel() {
             </div>
 
             <form onSubmit={searchArtworks} className="search-bar search-bar-panel">
-              <span className="search-icon" aria-hidden>⌕</span>
+              <span className="search-icon" aria-hidden><Icon name="search" size={16} /></span>
               <input
                 id="artwork-search"
                 value={searchQ}
@@ -243,7 +243,7 @@ export default function AuctioneerPanel() {
                               }}
                             />
                             {selected?.externalId === r.externalId && (
-                              <span className="artwork-check">✓</span>
+                              <span className="artwork-check"><Icon name="check" size={12} /></span>
                             )}
                           </div>
                           <div className="artwork-info">
@@ -370,7 +370,7 @@ export default function AuctioneerPanel() {
                     onClick={() => setSelected(null)}
                     aria-label="Limpar seleção"
                   >
-                    ✕
+                    <Icon name="x" size={14} />
                   </button>
                 </div>
 
@@ -417,13 +417,13 @@ export default function AuctioneerPanel() {
                   {lotError && <p className="msg msg-err">{lotError}</p>}
                   {lotMsg && <p className="msg msg-ok">{lotMsg}</p>}
                   <button className="btn btn-primary btn-block" disabled={busy}>
-                    {busy ? "Criando…" : "🔨 Publicar lote"}
+                    {busy ? "Criando…" : <><Icon name="gavel" size={16} /> Publicar lote</>}
                   </button>
                 </form>
               </>
             ) : (
               <div className="create-empty">
-                <span className="create-empty-icon">🖼</span>
+                <span className="create-empty-icon"><Icon name="gallery" size={32} /></span>
                 <h2>Publicar um novo lote</h2>
                 <p className="muted">
                   Pesquise uma obra à esquerda e selecione-a. O formulário de

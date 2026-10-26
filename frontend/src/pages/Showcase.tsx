@@ -1,18 +1,20 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { api } from "../api/client";
 import { errorMessage } from "../lib/utils";
 import type { Lot, Showcase as ShowcaseData } from "../types";
 import LotCard from "../components/LotCard";
+import Icon from "../components/Icon";
+import type { IconName } from "../components/Icon";
 
 type StatusFilter = "all" | "live" | "scheduled" | "ended";
 type SortOrder = "ending" | "price-asc" | "price-desc" | "newest";
 
-const STATUS_OPTIONS: { id: StatusFilter; label: string; icon: string }[] = [
-  { id: "all", label: "Todos", icon: "◈" },
-  { id: "live", label: "Ao vivo", icon: "●" },
-  { id: "scheduled", label: "Agendados", icon: "◷" },
-  { id: "ended", label: "Encerrados", icon: "✓" },
+const STATUS_OPTIONS: { id: StatusFilter; label: string; icon: IconName }[] = [
+  { id: "all", label: "Todos", icon: "grid" },
+  { id: "live", label: "Ao vivo", icon: "dot" },
+  { id: "scheduled", label: "Agendados", icon: "clock" },
+  { id: "ended", label: "Encerrados", icon: "check" },
 ];
 
 function priceOf(lot: Lot) {
@@ -38,12 +40,12 @@ function sortLots(lots: Lot[], order: SortOrder) {
 function Section({
   title,
   subtitle,
-  emoji,
+  icon,
   lots,
 }: {
   title: string;
   subtitle: string;
-  emoji: string;
+  icon: IconName;
   lots: Lot[];
 }) {
   if (lots.length === 0) return null;
@@ -52,7 +54,7 @@ function Section({
       <div className="section-heading">
         <div>
           <h2 className="section-title">
-            <span className="section-emoji">{emoji}</span>
+            <span className="section-icon"><Icon name={icon} size={16} /></span>
             {title}
             <span className="section-count">{lots.length}</span>
           </h2>
@@ -77,25 +79,31 @@ export default function Showcase() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
-    try {
-      const d = await api<ShowcaseData>(
-        `/lots${q ? `?q=${encodeURIComponent(q)}` : ""}`
-      );
-      setData(d);
-      setError(null);
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [q]);
-
   useEffect(() => {
-    load();
-    const t = setInterval(load, 5000);
-    return () => clearInterval(t);
-  }, [load]);
+    let cancelled = false;
+
+    async function tick() {
+      try {
+        const d = await api<ShowcaseData>(
+          `/lots${q ? `?q=${encodeURIComponent(q)}` : ""}`
+        );
+        if (cancelled) return;
+        setData(d);
+        setError(null);
+      } catch (e) {
+        if (!cancelled) setError(errorMessage(e));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void tick();
+    const t = setInterval(tick, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [q]);
 
   const allLots = useMemo(
     () =>
@@ -155,7 +163,7 @@ export default function Showcase() {
 
           <form onSubmit={search} className="search-bar" role="search">
             <span className="search-icon" aria-hidden>
-              ⌕
+              <Icon name="search" size={18} />
             </span>
             <input
               id="search-input"
@@ -204,7 +212,7 @@ export default function Showcase() {
               className={`filter-chip${status === opt.id ? " filter-chip-active" : ""}`}
               onClick={() => setStatus(opt.id)}
             >
-              <span className="filter-chip-icon">{opt.icon}</span>
+              <span className="filter-chip-icon"><Icon name={opt.icon} size={13} /></span>
               {opt.label}
               <span className="filter-chip-count">{counts[opt.id]}</span>
             </button>
@@ -243,7 +251,7 @@ export default function Showcase() {
         </div>
       ) : total === 0 || (!showSections && visibleLots.length === 0) ? (
         <div className="empty-state">
-          <p className="empty-icon">🔍</p>
+          <p className="empty-icon"><Icon name="search" size={40} /></p>
           <p>
             {q ? `Nenhum resultado para “${q}”.` : statusEmptyLabel[status]}
           </p>
@@ -265,19 +273,19 @@ export default function Showcase() {
           <Section
             title="Ao vivo agora"
             subtitle="Lotes a receber lances neste momento"
-            emoji="🔴"
+            icon="dot"
             lots={sortLots(data?.live ?? [], sort)}
           />
           <Section
             title="Próximos leilões"
             subtitle="Agendados e prontos para começar"
-            emoji="📅"
+            icon="clock"
             lots={sortLots(data?.scheduled ?? [], sort)}
           />
           <Section
             title="Já encerrados"
             subtitle="Resultados e obras arrematadas"
-            emoji="✅"
+            icon="check"
             lots={sortLots(data?.ended ?? [], sort)}
           />
         </>

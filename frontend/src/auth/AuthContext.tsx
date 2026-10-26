@@ -1,31 +1,32 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { Role, User } from "../types";
-
-interface AuthValue {
-  user: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
-  register: (data: { name: string; email: string; password: string; role: Role }) => Promise<User>;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthValue | null>(null);
+import { AuthContext } from "./auth-context";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Se não há token, já não há nada para carregar (evita setState síncrono no efeito).
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem("token")));
 
   useEffect(() => {
-    if (!localStorage.getItem("token")) {
-      setLoading(false);
-      return;
-    }
+    if (!localStorage.getItem("token")) return;
+
+    let cancelled = false;
     api<User>("/auth/me")
-      .then(setUser)
-      .catch(() => localStorage.removeItem("token"))
-      .finally(() => setLoading(false));
+      .then((me) => {
+        if (!cancelled) setUser(me);
+      })
+      .catch(() => {
+        if (!cancelled) localStorage.removeItem("token");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const finish = (res: { user: User; token: string }) => {
@@ -66,10 +67,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth outside AuthProvider");
-  return ctx;
 }

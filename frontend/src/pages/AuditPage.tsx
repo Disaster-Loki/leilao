@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { errorMessage, formatMoney } from "../lib/utils";
 import type { AuditResult } from "../types";
+import Icon from "../components/Icon";
 
 export default function AuditPage() {
   const { lotId } = useParams<{ lotId: string }>();
@@ -46,7 +47,7 @@ export default function AuditPage() {
       <div className={`verdict-banner ${result.valid ? "verdict-ok" : "verdict-fail"}`}>
         {result.valid ? (
           <>
-            <span className="verdict-icon">✅</span>
+            <span className="verdict-icon"><Icon name="check" size={26} /></span>
             <div>
               <strong>Histórico íntegro</strong>
               <p>
@@ -57,7 +58,7 @@ export default function AuditPage() {
           </>
         ) : (
           <>
-            <span className="verdict-icon">🚨</span>
+            <span className="verdict-icon"><Icon name="alert" size={26} /></span>
             <div>
               <strong>Adulteração detectada!</strong>
               {result.firstFailure && (
@@ -156,7 +157,7 @@ export default function AuditPage() {
                         </span>
                       </td>
                       <td className={hasIssue ? "err-text" : "ok-text"}>
-                        {hasIssue ? "✖" : "✔"}
+                        <Icon name={hasIssue ? "x" : "check"} size={15} />
                       </td>
                     </tr>
                   );

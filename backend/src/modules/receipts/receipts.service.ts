@@ -40,7 +40,8 @@ export async function listMyBids(userId: string) {
             r.id AS receipt_id
        FROM lots l
        LEFT JOIN receipts r ON r.lot_id = l.id
-      WHERE EXISTS (SELECT 1 FROM bids b WHERE b.lot_id = l.id AND b.bidder_id = $1)
+      WHERE l.cancelled_at IS NULL
+        AND EXISTS (SELECT 1 FROM bids b WHERE b.lot_id = l.id AND b.bidder_id = $1)
       ORDER BY l.end_at DESC`,
     [userId]
   );

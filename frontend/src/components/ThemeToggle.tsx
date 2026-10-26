@@ -1,4 +1,5 @@
 import { useTheme } from "../lib/theme-context";
+import Icon from "./Icon";
 
 interface Props {
   compact?: boolean;
@@ -17,8 +18,8 @@ export default function ThemeToggle({ compact = false }: Props) {
       title={`Ativar modo ${next}`}
     >
       <span className="theme-toggle-icons" aria-hidden>
-        <span className={theme === "light" ? "on" : ""}>☀️</span>
-        <span className={theme === "dark" ? "on" : ""}>🌙</span>
+        <span className={theme === "light" ? "on" : ""}><Icon name="sun" size={15} /></span>
+        <span className={theme === "dark" ? "on" : ""}><Icon name="moon" size={15} /></span>
       </span>
       {!compact && <span className="theme-toggle-text"></span>}
     </button>

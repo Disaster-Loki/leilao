@@ -1,9 +1,10 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/auth-context";
 import { errorMessage } from "../lib/utils";
 import type { Role } from "../types";
+import Icon from "../components/Icon";
 
 // Regras de senha — espelham o Zod do backend
 const PASSWORD_RULES = [
@@ -11,7 +12,7 @@ const PASSWORD_RULES = [
   { id: "upper",   label: "Uma letra maiúscula (A-Z)",     test: (p: string) => /[A-Z]/.test(p) },
   { id: "lower",   label: "Uma letra minúscula (a-z)",     test: (p: string) => /[a-z]/.test(p) },
   { id: "number",  label: "Um número (0-9)",               test: (p: string) => /[0-9]/.test(p) },
-  { id: "special", label: "Um carácter especial (!@#$%…)", test: (p: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p) },
+  { id: "special", label: "Um carácter especial (!@#$%…)", test: (p: string) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(p) },
 ];
 
 function PasswordStrength({ password }: { password: string }) {
@@ -117,21 +118,21 @@ export default function Login() {
 
             <ul className="auth-features">
               <li>
-                <span className="auth-feature-icon">⚡</span>
+                <span className="auth-feature-icon"><Icon name="bolt" size={17} /></span>
                 <div>
                   <strong>Lances em tempo real</strong>
                   <span>Prorrogação automática nos últimos minutos.</span>
                 </div>
               </li>
               <li>
-                <span className="auth-feature-icon">🔒</span>
+                <span className="auth-feature-icon"><Icon name="lock" size={17} /></span>
                 <div>
                   <strong>Saldo comprometido</strong>
                   <span>O valor só é reservado enquanto está a ganhar.</span>
                 </div>
               </li>
               <li>
-                <span className="auth-feature-icon">🧾</span>
+                <span className="auth-feature-icon"><Icon name="receipt" size={17} /></span>
                 <div>
                   <strong>Histórico auditável</strong>
                   <span>Comprovante e auditoria de cada arremate.</span>
@@ -185,8 +186,8 @@ export default function Login() {
                     value={role}
                     onChange={(e) => setRole(e.target.value as Role)}
                   >
-                    <option value="bidder">🙋 Licitante — dou lances</option>
-                    <option value="auctioneer">🔨 Leiloeiro — crio lotes</option>
+                    <option value="bidder">Licitante — dou lances</option>
+                    <option value="auctioneer">Leiloeiro — crio lotes</option>
                   </select>
                 </div>
               </>
@@ -225,7 +226,7 @@ export default function Login() {
                   aria-label={showPwd ? "Ocultar senha" : "Mostrar senha"}
                   tabIndex={-1}
                 >
-                  {showPwd ? "🙈" : "👁"}
+                  <Icon name={showPwd ? "eyeOff" : "eye"} size={17} />
                 </button>
               </div>
               {isRegister && password.length > 0 && (
@@ -261,15 +262,15 @@ export default function Login() {
             <div className="demo-chips">
               <button type="button" className="chip"
                 onClick={() => fillDemo("leiloeiro@leilao.com", "Leilao@123")}>
-                🔨 Leiloeiro
+                Leiloeiro
               </button>
               <button type="button" className="chip"
                 onClick={() => fillDemo("ana@leilao.com", "Leilao@123")}>
-                🙋 Ana
+                Ana
               </button>
               <button type="button" className="chip"
                 onClick={() => fillDemo("bruno@leilao.com", "Leilao@123")}>
-                🙋 Bruno
+                Bruno
               </button>
             </div>
             <Link to="/" className="auth-guest-link">
