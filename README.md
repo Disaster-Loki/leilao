@@ -10,8 +10,8 @@ lote com lances ao vivo, usando saldo simulado.
 
 | Camada | Tecnologia |
 |---|---|
-| Front-end | React + Vite + TypeScript |
-| Back-end | Node.js + Express + TypeScript |
+| Front-end | React 19 + Vite + TypeScript |
+| Back-end | Node.js + Express 5 + TypeScript |
 | Banco de dados | PostgreSQL (migrations com `node-pg-migrate`) |
 | API externa | Art Institute of Chicago (`api.artic.edu`) |
 
@@ -53,6 +53,7 @@ cd backend
 cp .env.example .env      # depois edite os segredos
 npm install
 npm run migrate:dev       # cria as tabelas
+npm run seed              # insere as contas de teste
 npm run dev               # sobe a API em http://localhost:3000
 ```
 
@@ -65,6 +66,25 @@ cd frontend
 cp .env.example .env
 npm install
 npm run dev               # abre em http://localhost:5173
+```
+
+## Build de produção
+
+### Back-end
+
+```bash
+cd backend
+npm run build   # compila TypeScript → dist/
+npm run start   # node dist/server.js
+```
+
+### Front-end
+
+```bash
+cd frontend
+npm run build   # gera dist/ estático
+# sirva com qualquer servidor HTTP estático (nginx, Caddy, etc.)
+# Configure o servidor para redirigir todas as rotas para index.html (SPA)
 ```
 
 ## Variáveis de ambiente
@@ -182,14 +202,84 @@ simultâneo não cause um falso alarme.
 - A auditoria mostra pseudónimos (`Licitante #XXXXXX`) derivados por HMAC de
   (utilizador, lote), sem dados pessoais.
 
-## Limitações e comportamentos inesperados
+## Limitações e comportamentos conhecidos
 
 - O papel (leiloeiro ou licitante) é escolhido livremente no registo, porque o
   enunciado não define como alguém se torna leiloeiro. Numa aplicação real,
   isso seria restrito.
 - Recuperação de senha não foi implementada (fora do escopo do enunciado).
-- A imagem do lote depende, por ora, do servidor de imagens do Art Institute.
+- A imagem do lote depende do servidor de imagens do Art Institute of Chicago.
+- O front usa polling (a cada 2–5 s) em vez de WebSocket. Num produto real
+  usaria SSE ou WebSocket; polling foi suficiente para os requisitos do teste.
+
+## Uso de inteligência artificial
+
+O desenvolvimento foi feito em **duas fases** com abordagens distintas:
+
+### Fase 1 — Back-end (feito manualmente)
+
+Todo o back-end foi desenvolvido **sem assistência de IA**. Isto incluiu:
+
+- Modelagem do banco de dados e migrations SQL
+- Módulos de autenticação, carteira, lotes e lances
+- Transações com `SELECT ... FOR UPDATE` para concorrência segura
+- Algoritmo da cadeia de hashes HMAC-SHA256
+- Lógica de anti-sniping, liquidação idempotente e pseudónimos
+- Integração com a API do Art Institute of Chicago
+
+O objetivo era provar domínio real das tecnologias avaliadas (PostgreSQL com
+locks, consistência financeira, segurança, testes) antes de qualquer auxílio externo.
+
+### Fase 2 — Front-end (com assistência de IA)
+
+Após o back-end estar completo e testado, a **Antigravity (Claude / GPT)** foi
+usada para acelerar a construção da interface React, por ser um trabalho
+predominantemente de scaffolding e composição de componentes com padrões já
+estabelecidos. A IA:
+
+- Gerou os componentes React com base na estrutura de tipos do back-end já existente
+- Criou o design system (CSS custom properties, dark mode, responsividade)
+- Compôs as páginas (vitrine, sala de lances, carteira, painel, auditoria, comprovante)
+- Corrigiu erros de TypeScript e de build apontados durante o desenvolvimento
+
+Toda a lógica crítica (hooks de polling, countdown sincronizado com o servidor,
+deteção de prorrogação anti-sniping) foi revisada e ajustada pelo desenvolvedor.
+
+### Plano de desenvolvimento
+
+O projeto seguiu um plano estruturado:
+
+1. Modelagem e migrations do banco
+2. Auth com JWT e bcrypt
+3. Carteira com saldo comprometido
+4. Integração API externa com snapshot
+5. Lotes: criação, vitrine, cancelamento
+6. Lances: transação atómica, cadeia de hashes, anti-sniping
+7. Liquidação e comprovante
+8. Auditoria pública
+9. Front-end (com IA): componentes, páginas, design
+10. Build de produção, testes e documentação
 
 ## Deploy
 
-_A preencher quando o deploy estiver feito._
+> _A ser preenchido após deploy em produção._
+
+**Opções recomendadas:**
+
+| Serviço | Para quê |
+|---|---|
+| [Neon](https://neon.tech) | PostgreSQL serverless (free tier) |
+| [Render](https://render.com) | Back-end Node.js (free tier, cold start) |
+| [Vercel](https://vercel.com) | Front-end estático (free tier) |
+
+**Configuração do back-end no Render:**
+- Build command: `npm install && npm run build`
+- Start command: `npm run start`
+- Variáveis de ambiente: `DATABASE_URL`, `JWT_SECRET`, `HMAC_SECRET`, `FRONTEND_URL`, `PORT`
+
+**Configuração do front-end no Vercel:**
+- Framework preset: `Vite`
+- Build command: `npm run build`
+- Output directory: `dist`
+- Variável de ambiente: `VITE_API_URL` (URL do back-end no Render)
+- Rewrites: `/* → /index.html` (para o React Router funcionar)
