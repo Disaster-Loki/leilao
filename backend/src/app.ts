@@ -15,12 +15,31 @@ import { receiptsRouter, myRouter } from "./modules/receipts/receipts.routes";
 export const app = express();
 
 app.use(helmet());
+
+// Aceita uma ou várias origens separadas por vírgula. Normaliza para a origem
+// (sem path nem barra final), para tolerar URLs como ".../login" ou ".../".
+function toOrigin(value: string) {
+  const trimmed = value.trim().replace(/\/+$/, "");
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return trimmed;
+  }
+}
+
 const allowedOrigins = [
-  env.FRONTEND_URL,
-  // aceitar também a porta de dev quando FRONTEND_URL aponta para preview
-  env.FRONTEND_URL.replace(":4173", ":5173"),
-  env.FRONTEND_URL.replace(":5173", ":4173"),
-].filter((v, i, arr) => arr.indexOf(v) === i);
+  ...new Set(
+    env.FRONTEND_URL.split(",")
+      .map(toOrigin)
+      .filter(Boolean)
+      .flatMap((origin) => [
+        origin,
+        // aceitar também a porta de dev quando FRONTEND_URL aponta para preview
+        origin.replace(":4173", ":5173"),
+        origin.replace(":5173", ":4173"),
+      ])
+  ),
+];
 
 app.use(cors({
   origin: (origin, cb) => {
