@@ -12,7 +12,16 @@ import {
 } from "../lib/utils";
 import type { Room, Wallet } from "../types";
 import Countdown from "../components/Countdown";
-import { PLACEHOLDER } from "../components/LotCard";
+import { imageSrc, PLACEHOLDER } from "../lib/image";
+
+const CONFETTI_COLORS = [
+  "#6366f1",
+  "#a855f7",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#38bdf8",
+];
 
 export default function LotRoom() {
   const { id } = useParams<{ id: string }>();
@@ -24,7 +33,11 @@ export default function LotRoom() {
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
   const lastEndRef = useRef<number | null>(null);
+  const lastStatusRef = useRef<string | null>(null);
+  const celebratedRef = useRef(false);
+  const loadedLotIdRef = useRef<string | null>(null);
   const isBidder = user?.role === "bidder";
 
   const load = useCallback(async () => {
@@ -35,6 +48,26 @@ export default function LotRoom() {
         setNotice("⏱ Prazo prorrogado +2 min (lance nos últimos 2 minutos).");
       }
       lastEndRef.current = end;
+
+      if (loadedLotIdRef.current !== r.lot.id) {
+        loadedLotIdRef.current = r.lot.id;
+        lastStatusRef.current = null;
+        celebratedRef.current = false;
+        setCelebrate(false);
+      }
+
+      const previousStatus = lastStatusRef.current;
+      lastStatusRef.current = r.lot.status;
+      if (
+        previousStatus === "live" &&
+        r.lot.status === "ended" &&
+        r.myPosition === "leading" &&
+        !celebratedRef.current
+      ) {
+        celebratedRef.current = true;
+        setCelebrate(true);
+      }
+
       setRoom(r);
       setLoadError(null);
       if (isBidder) {
@@ -97,7 +130,7 @@ export default function LotRoom() {
       <div className="room-info">
         <img
           className="room-img"
-          src={lot.imageUrl ?? PLACEHOLDER}
+          src={imageSrc(lot.imageUrl)}
           alt={lot.title}
           onError={(e) => {
             e.currentTarget.src = PLACEHOLDER;
@@ -296,6 +329,55 @@ export default function LotRoom() {
           )}
         </div>
       </div>
+
+      {celebrate && (
+        <div
+          className="win-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="win-title"
+        >
+          <div className="confetti" aria-hidden>
+            {Array.from({ length: 44 }).map((_, i) => (
+              <span
+                key={i}
+                className="confetti-piece"
+                style={{
+                  left: `${(i * 37) % 100}%`,
+                  background: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+                  animationDelay: `${(i % 12) * 0.14}s`,
+                  animationDuration: `${2.2 + (i % 5) * 0.35}s`,
+                  transform: `rotate(${(i * 53) % 360}deg)`,
+                }}
+              />
+            ))}
+          </div>
+          <div className="win-card card">
+            <span className="win-trophy" aria-hidden>🏆</span>
+            <span className="win-kicker">Leilão encerrado</span>
+            <h2 id="win-title">Parabéns, venceu o leilão!</h2>
+            <p className="muted">
+              Arremataste <strong>{lot.title}</strong> por{" "}
+              <strong className="win-amount">
+                {formatMoney(lot.currentBidCents ?? lot.startPriceCents)}
+              </strong>
+              .
+            </p>
+            <div className="win-actions">
+              <Link to="/my/bids" className="btn btn-primary">
+                Ver meus arremates
+              </Link>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setCelebrate(false)}
+              >
+                Continuar a ver
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

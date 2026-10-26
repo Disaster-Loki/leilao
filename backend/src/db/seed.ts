@@ -12,7 +12,7 @@ import bcrypt from "bcryptjs";
 import { pool } from "./pool";
 import { computeBidHash, GENESIS } from "../modules/bids/hash";
 
-const PASSWORD = "Leilao123"; // ≥8 chars, letra + número (regra de segurança)
+const PASSWORD = "Leilao@123"; // ≥8 chars, maiúscula, minúscula, número e especial
 
 const users = [
   {
@@ -197,7 +197,7 @@ async function seed() {
 
     await client.query("COMMIT");
     console.log("\n✅ Seed concluído.\n");
-    console.log("Credenciais (senha: Leilao123):");
+    console.log("Credenciais (senha: Leilao@123):");
     console.log("  Leiloeiro: leiloeiro@leilao.com");
     console.log("  Licitante: ana@leilao.com");
     console.log("  Licitante: bruno@leilao.com");

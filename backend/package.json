@@ -9,6 +9,7 @@
     "start": "node dist/server.js",
     "migrate": "node-pg-migrate up -m migrations",
     "migrate:dev": "dotenv -e .env -- node-pg-migrate up -m migrations",
+    "reset": "tsx src/db/reset.ts",
     "migrate:create": "node-pg-migrate create -m migrations -j sql",
     "seed": "tsx src/db/seed.ts"
   }

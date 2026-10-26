@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { errorMessage, formatMoney, formatDateTime } from "../lib/utils";
 import type { Receipt } from "../types";
-import { PLACEHOLDER } from "../components/LotCard";
+import { imageSrc, PLACEHOLDER } from "../lib/image";
 
 export default function ReceiptPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,7 +27,7 @@ export default function ReceiptPage() {
         <div className="receipt-lot">
           <img
             className="receipt-img"
-            src={receipt.imageUrl ?? PLACEHOLDER}
+            src={imageSrc(receipt.imageUrl)}
             alt={receipt.title}
             onError={(e) => {
               e.currentTarget.src = PLACEHOLDER;

@@ -93,127 +93,190 @@ export default function Login() {
   }
 
   return (
-    <div className="auth-wrap">
-      <div className="auth-card card">
-        <div className="auth-header">
-          <span className="auth-icon">🏛</span>
-          <h1 className="auth-title">Casa de Leilões</h1>
-          <p className="muted auth-sub">
-            {isRegister ? "Crie sua conta grátis" : "Entre na sua conta"}
-          </p>
-        </div>
+    <div className="auth-page">
+      <div className="auth-shell">
+        <aside className="auth-brand-panel">
+          <Link to="/" className="brand auth-brand">
+            <span className="brand-mark">CL</span>
+            <span className="brand-copy">
+              <span className="brand-text">Casa de Leilões</span>
+              <span className="brand-tag">Arte · ao vivo</span>
+            </span>
+          </Link>
 
-        <form onSubmit={submit} className="form">
-          {isRegister && (
-            <>
-              <div className="field">
-                <label htmlFor="reg-name">Nome completo</label>
-                <input
-                  id="reg-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Seu nome"
-                  required
-                  minLength={2}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="reg-role">Tipo de conta</label>
-                <select
-                  id="reg-role"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as Role)}
-                >
-                  <option value="bidder">🙋 Licitante — deposita e dá lances</option>
-                  <option value="auctioneer">🔨 Leiloeiro — cria e gere lotes</option>
-                </select>
-              </div>
-            </>
-          )}
+          <div className="auth-brand-body">
+            <span className="auth-eyebrow">Leilões de arte online</span>
+            <h1>
+              Onde grandes obras encontram <span className="hero-accent">novos colecionadores.</span>
+            </h1>
+            <p>
+              Disputas em tempo real com total transparência: saldo reservado de
+              forma segura e cada lance registado numa cadeia de hashes
+              verificável.
+            </p>
 
-          <div className="field">
-            <label htmlFor="auth-email">E-mail</label>
-            <input
-              id="auth-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@exemplo.com"
-              required
-              autoComplete="email"
-            />
+            <ul className="auth-features">
+              <li>
+                <span className="auth-feature-icon">⚡</span>
+                <div>
+                  <strong>Lances em tempo real</strong>
+                  <span>Prorrogação automática nos últimos minutos.</span>
+                </div>
+              </li>
+              <li>
+                <span className="auth-feature-icon">🔒</span>
+                <div>
+                  <strong>Saldo comprometido</strong>
+                  <span>O valor só é reservado enquanto está a ganhar.</span>
+                </div>
+              </li>
+              <li>
+                <span className="auth-feature-icon">🧾</span>
+                <div>
+                  <strong>Histórico auditável</strong>
+                  <span>Comprovante e auditoria de cada arremate.</span>
+                </div>
+              </li>
+            </ul>
           </div>
 
-          <div className="field">
-            <label htmlFor="auth-password">Senha</label>
-            <div className="pwd-input-wrap">
+          <div className="auth-brand-stats">
+            <div><strong>100%</strong><span>domínio público</span></div>
+            <div><strong>+2 min</strong><span>extensão anti-snipe</span></div>
+            <div><strong>SHA-256</strong><span>cadeia de lances</span></div>
+          </div>
+        </aside>
+
+        <section className="auth-form-panel">
+          <div className="auth-form-top">
+            <span className="auth-form-kicker">
+              {isRegister ? "Criar conta" : "Bem-vindo de volta"}
+            </span>
+          </div>
+
+          <div className="auth-form-head">
+            <h2>{isRegister ? "Comece a licitar hoje" : "Entrar na sua conta"}</h2>
+            <p className="muted">
+              {isRegister
+                ? "Leva menos de um minuto. Depois escolha a sua primeira obra."
+                : "Aceda à vitrine, aos seus lances e à carteira."}
+            </p>
+          </div>
+
+          <form onSubmit={submit} className="form">
+            {isRegister && (
+              <>
+                <div className="field">
+                  <label htmlFor="reg-name">Nome completo</label>
+                  <input
+                    id="reg-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Seu nome"
+                    required
+                    minLength={2}
+                    autoComplete="name"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="reg-role">Tipo de conta</label>
+                  <select
+                    id="reg-role"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value as Role)}
+                  >
+                    <option value="bidder">🙋 Licitante — dou lances</option>
+                    <option value="auctioneer">🔨 Leiloeiro — crio lotes</option>
+                  </select>
+                </div>
+              </>
+            )}
+
+            <div className="field">
+              <label htmlFor="auth-email">E-mail</label>
               <input
-                id="auth-password"
-                type={showPwd ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={isRegister ? "Crie uma senha forte" : "••••••••"}
+                id="auth-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@exemplo.com"
                 required
-                minLength={isRegister ? 8 : 1}
-                autoComplete={isRegister ? "new-password" : "current-password"}
+                autoComplete="email"
               />
-              <button
-                type="button"
-                className="pwd-toggle"
-                onClick={() => setShowPwd((v) => !v)}
-                aria-label={showPwd ? "Ocultar senha" : "Mostrar senha"}
-                tabIndex={-1}
-              >
-                {showPwd ? "🙈" : "👁"}
+            </div>
+
+            <div className="field">
+              <label htmlFor="auth-password">Senha</label>
+              <div className="pwd-input-wrap">
+                <input
+                  id="auth-password"
+                  type={showPwd ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={isRegister ? "Crie uma senha forte" : "••••••••"}
+                  required
+                  minLength={isRegister ? 8 : 1}
+                  autoComplete={isRegister ? "new-password" : "current-password"}
+                />
+                <button
+                  type="button"
+                  className="pwd-toggle"
+                  onClick={() => setShowPwd((v) => !v)}
+                  aria-label={showPwd ? "Ocultar senha" : "Mostrar senha"}
+                  tabIndex={-1}
+                >
+                  {showPwd ? "🙈" : "👁"}
+                </button>
+              </div>
+              {isRegister && password.length > 0 && (
+                <PasswordStrength password={password} />
+              )}
+            </div>
+
+            {error && <p className="msg msg-err">{error}</p>}
+
+            <button
+              className="btn btn-primary btn-block auth-submit"
+              disabled={busy || (isRegister && !pwdValid)}
+            >
+              {busy
+                ? "Aguarde…"
+                : isRegister
+                ? "Criar conta gratuita"
+                : "Entrar na conta"}
+            </button>
+          </form>
+
+          <p className="auth-switch muted">
+            {isRegister ? "Já tem conta? " : "Não tem conta? "}
+            <button type="button" className="link-btn" onClick={switchMode}>
+              {isRegister ? "Fazer login" : "Criar conta"}
+            </button>
+          </p>
+
+          <div className="auth-demo">
+            <p className="auth-demo-label">
+              <span>Contas de demonstração</span>
+            </p>
+            <div className="demo-chips">
+              <button type="button" className="chip"
+                onClick={() => fillDemo("leiloeiro@leilao.com", "Leilao@123")}>
+                🔨 Leiloeiro
+              </button>
+              <button type="button" className="chip"
+                onClick={() => fillDemo("ana@leilao.com", "Leilao@123")}>
+                🙋 Ana
+              </button>
+              <button type="button" className="chip"
+                onClick={() => fillDemo("bruno@leilao.com", "Leilao@123")}>
+                🙋 Bruno
               </button>
             </div>
-            {/* Indicador de força — só no registo e quando há texto */}
-            {isRegister && password.length > 0 && (
-              <PasswordStrength password={password} />
-            )}
+            <Link to="/" className="auth-guest-link">
+              Ver vitrine sem entrar →
+            </Link>
           </div>
-
-          {error && <p className="msg msg-err">{error}</p>}
-
-          <button
-            className="btn btn-primary btn-block"
-            disabled={busy || (isRegister && !pwdValid)}
-          >
-            {busy
-              ? "Aguarde…"
-              : isRegister
-              ? "Criar conta"
-              : "Entrar"}
-          </button>
-        </form>
-
-        <p className="auth-switch muted">
-          {isRegister ? "Já tem conta? " : "Não tem conta? "}
-          <a href="#" onClick={(e) => { e.preventDefault(); switchMode(); }}>
-            {isRegister ? "Fazer login" : "Criar conta"}
-          </a>
-        </p>
-
-        <div className="auth-demo">
-          <p className="muted">Contas de demonstração:</p>
-          <div className="demo-chips">
-            <button type="button" className="chip"
-              onClick={() => fillDemo("leiloeiro@leilao.com", "Leilao123")}>
-              🔨 Leiloeiro
-            </button>
-            <button type="button" className="chip"
-              onClick={() => fillDemo("ana@leilao.com", "Leilao123")}>
-              🙋 Ana
-            </button>
-            <button type="button" className="chip"
-              onClick={() => fillDemo("bruno@leilao.com", "Leilao123")}>
-              🙋 Bruno
-            </button>
-          </div>
-          <Link to="/" className="muted" style={{ fontSize: "0.85rem" }}>
-            Ver vitrine sem entrar →
-          </Link>
-        </div>
+        </section>
       </div>
     </div>
   );

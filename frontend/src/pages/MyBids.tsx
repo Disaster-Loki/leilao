@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { errorMessage, formatMoney, formatDateTime } from "../lib/utils";
 import type { MyBid } from "../types";
-import { PLACEHOLDER } from "../components/LotCard";
+import { imageSrc, PLACEHOLDER } from "../lib/image";
 
 export default function MyBids() {
   const [bids, setBids] = useState<MyBid[] | null>(null);
@@ -42,7 +42,7 @@ export default function MyBids() {
             <div key={b.lotId} className="mybid-card card">
               <img
                 className="mybid-img"
-                src={b.imageUrl ?? PLACEHOLDER}
+                src={imageSrc(b.imageUrl)}
                 alt={b.title}
                 onError={(e) => {
                   e.currentTarget.src = PLACEHOLDER;

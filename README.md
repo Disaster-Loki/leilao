@@ -19,10 +19,46 @@ lote com lances ao vivo, usando saldo simulado.
 
 ```
 leilao/
-├── backend/    API (Express + TypeScript)
-├── frontend/   Interface (React + Vite)
+├── backend/
+│   ├── migrations/            migrations SQL versionadas (node-pg-migrate)
+│   └── src/
+│       ├── config/            leitura e validação das variáveis de ambiente
+│       ├── db/                pool, reset, seed idempotente
+│       ├── middleware/        autenticação/JWT, papéis e tratamento de erros
+│       ├── modules/           um módulo por domínio: auth, wallet, lots,
+│       │                      bids, settlement, receipts, audit, external
+│       ├── app.ts             composição do Express (CORS, helmet, rotas)
+│       └── server.ts          arranque, agendador de liquidação e graceful stop
+├── frontend/
+│   └── src/
+│       ├── api/               cliente HTTP tipado e tratamento de erros
+│       ├── auth/              contexto de sessão (login/registo/logout)
+│       ├── components/        navbar, cards, countdown, tema e UI reutilizável
+│       ├── i18n/              tradução dos códigos de erro da API
+│       ├── lib/               utilitários, proxy de imagens e tema
+│       ├── pages/             uma página por rota do produto
+│       └── main.tsx           providers e router
+├── docker-compose.yml         PostgreSQL + migrate/seed + API + front-end
+├── run_tests.sh               testes de integração da API (curl + jq)
 └── README.md
 ```
+
+### Modelo de organização
+
+- **Back-end por domínio:** cada módulo em `backend/src/modules` tem rotas,
+  validação e serviço próprios. Regras financeiras e de lances ficam nos serviços,
+  nunca nas rotas. O acesso ao banco é sempre parametrizado e transacional quando
+  envolve saldo, lances ou liquidação.
+- **Front-end por página + componentes reutilizáveis:** as páginas representam as
+  rotas; a lógica transversal (sessão, cliente HTTP, tema, formatação) vive em
+  `auth`, `api`, `lib` e `i18n`. Não há estado global além da sessão e do tema.
+- **Configuração por ambiente:** segredos e URLs vêm de `.env`; o repositório só
+  versiona `.env.example`.
+- **Evolução da base de dados:** migrations versionadas em `backend/migrations`,
+  script de reset para desenvolvimento e seed idempotente com dados de teste.
+- **Fronteira com a API externa:** o navegador nunca chama o Art Institute
+  diretamente; o backend faz a busca, guarda o snapshot no lote e serve as imagens
+  por proxy (`/external/image`), para a aplicação continuar funcional se a API cair.
 
 ## Pré-requisitos
 
@@ -38,9 +74,12 @@ leilao/
 # Clone o repositório e entre na pasta
 git clone <url-do-repo> && cd leilao
 
-# Suba tudo (banco, migração, seed, back-end e front-end)
+# Suba tudo (banco, reset, migração, seed, back-end e front-end)
 docker compose up
 ```
+
+O serviço `migrate` apaga o schema `public` antes de migrar e semear, por isso
+cada `docker compose up` começa com a base de dados limpa.
 
 Aguarde até ver `✅ Seed concluído` no log do serviço `migrate`. Depois abra:
 
@@ -77,6 +116,7 @@ CREATE DATABASE leilao OWNER leilao;
 cd backend
 cp .env.example .env      # depois edite os segredos
 npm install
+npm run reset             # opcional: apaga tudo antes de recomeçar
 npm run migrate:dev       # cria as tabelas
 npm run seed              # insere as contas de teste
 npm run dev               # sobe a API em http://localhost:3000
@@ -163,8 +203,12 @@ As permissões são verificadas **no servidor** em cada rota (middleware
   sala, lances, auditoria e comprovante nunca dependem da API.
 - **Snapshot feito no servidor:** o front envia só o `externalId`; os dados do item
   vêm da API, não do cliente.
-- **Cancelamento:** só o dono do lote, e só se não houver lances (`LOT_HAS_BIDS`).
-  Usa o mesmo bloqueio de linha (`FOR UPDATE`) dos lances.
+- **Proxy de imagens:** o backend serve as imagens do Art Institute em
+  `/external/image?src=...` com cache e User-Agent de browser, evitando bloqueios
+  de hotlink e mantendo a vitrine/comprovante independentes do cliente externo.
+- **Cancelamento:** só o dono do lote e só antes de liquidado. Usa o mesmo
+  bloqueio de linha (`FOR UPDATE`) dos lances. Se já houver líder, o valor
+  comprometido é libertado (volta ao disponível) na mesma transação.
 - Só aparecem na busca obras de domínio público e com imagem.
 - **Lances atômicos:** cada lance corre numa transação PostgreSQL que bloqueia o
   lote (`SELECT ... FOR UPDATE`) e depois as carteiras envolvidas, sempre por ordem
@@ -195,9 +239,9 @@ Rodar `npm run seed` na pasta `backend`.
 
 | Papel | Email | Senha |
 |---|---|---|
-| Leiloeiro | leiloeiro@leilao.com | `Leilao123` |
-| Licitante | ana@leilao.com | `Leilao123` |
-| Licitante | bruno@leilao.com | `Leilao123` |
+| Leiloeiro | leiloeiro@leilao.com | `Leilao@123` |
+| Licitante | ana@leilao.com | `Leilao@123` |
+| Licitante | bruno@leilao.com | `Leilao@123` |
 
 O seed cria automaticamente um **lote ao vivo (Water Lilies — Monet)** com 3 lances já feitos (Ana está ganhando), para que o avaliador possa percorrer o fluxo completo sem montar nada do zero. O seed é **idempotente**: pode ser executado várias vezes sem duplicar dados.
 
@@ -205,9 +249,10 @@ Após o seed, os URLs do lote e da auditoria são impressos no terminal.
 
 ## Testes de integração (`run_tests.sh`)
 
-> O ficheiro está no `.gitignore` — fica só em ambiente local, nunca vai ao repositório.
+Pré-requisitos: API a correr e `curl` + `jq` instalados. O script cria os seus
+próprios utilizadores e lotes de teste e pode ser executado com a base semeada.
 
-Cobre 12 categorias, 30+ verificações:
+Cobre 12 categorias, 44 verificações:
 
 | Categoria | O que testa |
 |---|---|
@@ -217,13 +262,14 @@ Cobre 12 categorias, 30+ verificações:
 | Lotes | Criar (agendado e ao vivo), licitante proibido, cancelamento, cancelado fora da vitrine |
 | Lances | Mínimo, auto-lance, saldo insuficiente, incremental, leiloeiro proibido |
 | Saldo | Comprometido correto, devolvido ao ser superado |
+| Cancelamento com estorno | Comprometido libertado e disponível reposto após cancelar lote com lances |
 | Sala | Status ao vivo, histórico de lances |
 | Arremates | Listagem pessoal |
 | Auditoria | Cadeia de hashes íntegra |
 | Segurança | 4 rotas protegidas sem token |
 
 ```bash
-cd /home/wundu/projects/leilao
+# a partir da raiz do repositório, com a API já a correr
 chmod +x run_tests.sh
 BASE_URL=http://localhost:3000 ./run_tests.sh
 ```
@@ -256,15 +302,34 @@ simultâneo não cause um falso alarme.
 - A auditoria mostra pseudónimos (`Licitante #XXXXXX`) derivados por HMAC de
   (utilizador, lote), sem dados pessoais.
 
+## Checklist do enunciado
+
+| Requisito obrigatório | Estado / onde está |
+|---|---|
+| Deploy público | ⚠️ **Ainda não publicado.** Instruções em [Deploy](#deploy); falta escolher os serviços e preencher as URLs |
+| Dois papéis (leiloeiro/licitante) | ✅ Registo com escolha de papel; permissões verificadas no servidor |
+| Vitrine com ao vivo/agendados/encerrados | ✅ `/` — cancelados nunca aparecem |
+| Painel do leiloeiro | ✅ `/panel` — busca na API, cria/cancela lotes e vê resultados |
+| Sala ao vivo | ✅ `/lots/:id` — lance atual, histórico, posição, countdown e feedback |
+| Carteira | ✅ `/wallet` — total, comprometido, disponível e depósito simulado |
+| Meus arremates + comprovante partilhável | ✅ `/my/bids` e `/receipts/:id` (link público) |
+| Auditoria pública | ✅ `/audit/:lotId` — cadeia de hashes verificada sem login |
+| Mensagens de lance recusado | ✅ Motivo específico devolvido pela API e traduzido no front |
+| Regras de lance e saldo comprometido | ✅ Transações com lock; detalhes em [Decisões técnicas](#decisões-técnicas) |
+| Anti-sniping (+2 min) | ✅ Lance nos últimos 2 min estende o fim |
+| Liquidação e privacidade | ✅ Débito/crédito idempotentes e pseudónimos HMAC |
+| Dados de teste semeados | ✅ Leiloeiro, dois licitantes e lote ao vivo com 3 lances |
+| README detalhado | ✅ Este ficheiro (configuração, execução, decisões e limitações) |
+
 ## Funcionalidades opcionais implementadas
 
-| Opcional | Implementado |
-|---|---|
-| Busca e filtro de lotes | ✅ Campo de pesquisa na vitrine (título ou artista) |
-| Cancelamento com estorno automático | ✅ O leiloeiro pode cancelar lotes agendados e ao vivo; o valor comprometido é devolvido automaticamente ao licitante líder |
-| Docker Compose | ✅ `docker compose up` sobe tudo (db + backend + frontend) |
-| Testes automatizados | ✅ `run_tests.sh` — 12 categorias, 30+ verificações |
-| Dark Mode | ✅ Toggle ☀️/🌙 no navbar; preferência guardada em `localStorage` |
+| Opcional | Estado | Detalhe |
+|---|---|---|
+| Busca e filtro de lotes | ✅ | Pesquisa por título/artista/técnica, filtros por estado e ordenação por fim/preço/data |
+| Cancelamento com estorno automático | ✅ | O leiloeiro cancela lotes ainda não liquidados; o valor comprometido do líder volta a ficar disponível |
+| Docker Compose | ✅ | `docker compose up` sobe PostgreSQL, reset/migração/seed, API e front-end |
+| Testes automatizados | ✅ | `run_tests.sh` versionado — 12 categorias, 44 verificações de integração |
+| Dark Mode | ✅ | Toggle no navbar em todas as páginas (incluindo login); preferência guardada em `localStorage` |
 
 ## Limitações e comportamentos conhecidos
 
@@ -326,7 +391,9 @@ O projeto seguiu um plano estruturado:
 
 ## Deploy
 
-> _A ser preenchido após deploy em produção._
+> ⚠️ **Ainda não está publicado.** O deploy é obrigatório no enunciado e é o
+> próximo passo pendente. O README já deixa a configuração necessária para o
+> fazer; depois de publicado, substituir esta nota pelas URLs finais.
 
 **Opções recomendadas:**
 

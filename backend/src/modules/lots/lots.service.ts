@@ -75,7 +75,7 @@ export async function listShowcase(search?: string) {
   let where = "cancelled_at IS NULL";
   if (search) {
     params.push(`%${search}%`);
-    where += ` AND (title ILIKE $1 OR artist ILIKE $1)`;
+    where += ` AND (title ILIKE $1 OR artist ILIKE $1 OR medium ILIKE $1)`;
   }
   const { rows } = await pool.query(
     `SELECT ${PUBLIC_COLUMNS} FROM lots WHERE ${where} ORDER BY end_at ASC`,
@@ -135,11 +135,6 @@ export async function cancelLot(lotId: string, auctioneerId: string) {
       await client.query(
         "UPDATE wallets SET committed_cents = committed_cents - $1 WHERE user_id = $2",
         [lot.current_bid_cents, lot.leader_id]
-      );
-      await client.query(
-        `INSERT INTO wallet_transactions (user_id, type, amount_cents, lot_id)
-         VALUES ($1, 'deposit', $2, $3)`,
-        [lot.leader_id, lot.current_bid_cents, lotId]
       );
     }
 

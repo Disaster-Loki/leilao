@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { errorMessage, formatMoney, formatDateTime } from "../lib/utils";
+import { imageSrc, PLACEHOLDER } from "../lib/image";
 import type { ArtworkResult, Lot } from "../types";
 
 interface PanelData {
@@ -20,6 +22,7 @@ export default function AuctioneerPanel() {
   const [lotMsg, setLotMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [cancelMsg, setCancelMsg] = useState<string | null>(null);
+  const createPanelRef = useRef<HTMLDivElement>(null);
 
   // Criar lote: campos
   const [startPrice, setStartPrice] = useState("10000,00");
@@ -65,6 +68,15 @@ export default function AuctioneerPanel() {
     } finally {
       setSearching(false);
     }
+  }
+
+  function selectArtwork(artwork: ArtworkResult) {
+    setSelected(artwork);
+    setLotError(null);
+    setLotMsg(null);
+    window.setTimeout(() => {
+      createPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
   }
 
   function parseCents(s: string): number | null {
@@ -130,202 +142,297 @@ export default function AuctioneerPanel() {
     cancelled: "❌ Cancelado",
   };
 
+  const liveCount = data?.lots.filter((l) => l.status === "live").length ?? 0;
+  const scheduledCount = data?.lots.filter((l) => l.status === "scheduled").length ?? 0;
+  const endedCount = data?.lots.filter((l) => l.status === "ended").length ?? 0;
+
   return (
-    <div className="page-wrap">
-      <h1>Painel do Leiloeiro</h1>
+    <div className="container-wide panel-page">
+      <header className="page-heading">
+        <div>
+          <span className="page-eyebrow">Gestão de leilões</span>
+          <h1>Painel do Leiloeiro</h1>
+          <p className="muted">
+            Pesquise obras, publique novos lotes e acompanhe os resultados.
+          </p>
+        </div>
+        <div className="page-heading-actions">
+          <Link to="/" className="btn btn-ghost">Ver vitrine</Link>
+        </div>
+      </header>
 
       {data && (
-        <div className="panel-summary card">
-          <span>Total de lotes: <strong>{data.lots.length}</strong></span>
-          <span>
-            Total recebido:{" "}
-            <strong className="ok-text">
-              {formatMoney(data.totalReceivedCents)}
-            </strong>
-          </span>
+        <div className="stat-strip">
+          <div className="stat-mini card">
+            <span className="stat-mini-icon">🗂</span>
+            <div><strong>{data.lots.length}</strong><span>lotes no total</span></div>
+          </div>
+          <div className="stat-mini card">
+            <span className="stat-mini-icon">🔴</span>
+            <div><strong>{liveCount}</strong><span>ao vivo</span></div>
+          </div>
+          <div className="stat-mini card">
+            <span className="stat-mini-icon">📅</span>
+            <div><strong>{scheduledCount}</strong><span>agendados</span></div>
+          </div>
+          <div className="stat-mini card">
+            <span className="stat-mini-icon">💵</span>
+            <div>
+              <strong className="ok-text">{formatMoney(data.totalReceivedCents)}</strong>
+              <span>recebido ({endedCount} encerrados)</span>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Busca de obras */}
-      <div className="panel-section card">
-        <h2>1. Buscar obra na API (Art Institute of Chicago)</h2>
-        <form onSubmit={searchArtworks} className="form">
-          <div className="field">
-            <label htmlFor="artwork-search">Pesquisar obra</label>
-            <div className="input-row">
+      <div className="panel-layout">
+        <div className="panel-main">
+          {/* Busca de obras */}
+          <section className="panel-section card">
+            <div className="section-heading">
+              <div>
+                <h2>1. Buscar obra na API</h2>
+                <p className="section-subtitle muted">
+                  Art Institute of Chicago · escolha uma obra para criar o lote
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={searchArtworks} className="search-bar search-bar-panel">
+              <span className="search-icon" aria-hidden>⌕</span>
               <input
                 id="artwork-search"
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
-                placeholder="Ex: monet, starry night, portrait…"
+                placeholder="Ex: monet, water lilies, portrait…"
                 minLength={2}
+                aria-label="Pesquisar obra"
               />
               <button className="btn btn-primary" disabled={searching}>
-                {searching ? "Buscando…" : "Buscar"}
+                {searching ? "Buscando…" : "Buscar obra"}
               </button>
-            </div>
-          </div>
-        </form>
+            </form>
 
-        {searchError && <p className="msg msg-err">{searchError}</p>}
+            {searchError && <p className="msg msg-err">{searchError}</p>}
 
-        {results !== null && (
-          <div className="artwork-results">
-            {results.length === 0 ? (
-              <p className="muted">Nenhuma obra encontrada.</p>
-            ) : (
-              <div className="artwork-grid">
-                {results.map((r) => (
-                  <button
-                    key={r.externalId}
-                    type="button"
-                    className={`artwork-item card ${selected?.externalId === r.externalId ? "artwork-selected" : ""}`}
-                    onClick={() => setSelected(r)}
-                  >
-                    {r.imageUrl ? (
-                      <img src={r.imageUrl} alt={r.title} />
-                    ) : (
-                      <div className="artwork-no-img">Sem imagem</div>
-                    )}
-                    <div className="artwork-info">
-                      <p className="artwork-title">{r.title}</p>
-                      {r.artist && <p className="muted">{r.artist}</p>}
+            {results !== null && (
+              <div className="artwork-results">
+                {results.length === 0 ? (
+                  <p className="muted">Nenhuma obra encontrada.</p>
+                ) : (
+                  <>
+                    <p className="results-meta muted">
+                      {results.length} obras encontradas — selecione uma para preencher o
+                      formulário à direita.
+                    </p>
+                    <div className="artwork-grid">
+                      {results.map((r) => (
+                        <button
+                          key={r.externalId}
+                          type="button"
+                          className={`artwork-item card ${selected?.externalId === r.externalId ? "artwork-selected" : ""}`}
+                          onClick={() => selectArtwork(r)}
+                        >
+                          <div className="artwork-media">
+                            <img
+                              src={imageSrc(r.imageUrl)}
+                              alt={r.title}
+                              loading="lazy"
+                              onError={(e) => {
+                                e.currentTarget.src = PLACEHOLDER;
+                              }}
+                            />
+                            {selected?.externalId === r.externalId && (
+                              <span className="artwork-check">✓</span>
+                            )}
+                          </div>
+                          <div className="artwork-info">
+                            <p className="artwork-title clamp1">{r.title}</p>
+                            {r.artist && <p className="muted clamp1">{r.artist}</p>}
+                          </div>
+                        </button>
+                      ))}
                     </div>
-                    {selected?.externalId === r.externalId && (
-                      <span className="artwork-check">✓</span>
-                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* Meus lotes */}
+          <section className="panel-section card">
+            <div className="section-heading">
+              <div>
+                <h2>Meus lotes</h2>
+                <p className="section-subtitle muted">
+                  Estado, resultados e ações de cada lote publicado
+                </p>
+              </div>
+            </div>
+
+            {cancelMsg && (
+              <p className={cancelMsg.includes("cancelado") ? "msg msg-ok" : "msg msg-err"}>
+                {cancelMsg}
+              </p>
+            )}
+            {!data ? (
+              <p className="muted">Carregando…</p>
+            ) : data.lots.length === 0 ? (
+              <p className="muted">Você ainda não criou nenhum lote.</p>
+            ) : (
+              <div className="lots-table-wrap">
+                <table className="bids-table lots-table">
+                  <thead>
+                    <tr>
+                      <th>Obra</th>
+                      <th>Status</th>
+                      <th>Fim</th>
+                      <th>Lance atual</th>
+                      <th>Lances</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.lots.map((l) => (
+                      <tr key={l.id}>
+                        <td>
+                          <div className="lot-cell">
+                            <img
+                              src={imageSrc(l.imageUrl)}
+                              alt=""
+                              onError={(e) => {
+                                e.currentTarget.src = PLACEHOLDER;
+                              }}
+                            />
+                            <div>
+                              <Link to={`/lots/${l.id}`} className="lot-cell-title">
+                                {l.title}
+                              </Link>
+                              <span className="muted clamp1">{l.artist ?? "—"}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`badge badge-${l.status}`}>
+                            {statusLabel[l.status]}
+                          </span>
+                        </td>
+                        <td className="muted">{formatDateTime(l.endAt)}</td>
+                        <td>
+                          {l.currentBidCents !== null
+                            ? <strong>{formatMoney(l.currentBidCents)}</strong>
+                            : <span className="muted">—</span>}
+                        </td>
+                        <td className="muted">{l.bidCount}</td>
+                        <td>
+                          {(l.status === "scheduled" || l.status === "live") && (
+                            <button
+                              className="btn btn-sm btn-danger"
+                              onClick={() => cancelLot(l.id, l.title, l.bidCount)}
+                            >
+                              Cancelar
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* Formulário fixo ao lado dos resultados */}
+        <aside
+          className={`panel-aside${selected ? " panel-aside-active" : ""}`}
+          ref={createPanelRef}
+        >
+          <div className="create-card card">
+            {selected ? (
+              <>
+                <div className="create-preview">
+                  <img
+                    src={imageSrc(selected.imageUrl)}
+                    alt={selected.title}
+                    onError={(e) => {
+                      e.currentTarget.src = PLACEHOLDER;
+                    }}
+                  />
+                  <div className="create-preview-info">
+                    <span className="create-kicker">Obra selecionada</span>
+                    <strong>{selected.title}</strong>
+                    <span className="muted clamp1">{selected.artist ?? "—"}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost create-clear"
+                    onClick={() => setSelected(null)}
+                    aria-label="Limpar seleção"
+                  >
+                    ✕
                   </button>
-                ))}
+                </div>
+
+                <h2>2. Criar lote</h2>
+                <form onSubmit={createLot} className="form create-form">
+                  <div className="field">
+                    <label htmlFor="start-price">Lance inicial (R$)</label>
+                    <input
+                      id="start-price"
+                      value={startPrice}
+                      onChange={(e) => setStartPrice(e.target.value)}
+                      placeholder="10.000,00"
+                      inputMode="decimal"
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="min-increment">Incremento mínimo (R$)</label>
+                    <input
+                      id="min-increment"
+                      value={minIncrement}
+                      onChange={(e) => setMinIncrement(e.target.value)}
+                      placeholder="1.000,00"
+                      inputMode="decimal"
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="start-at">Início do leilão</label>
+                    <input
+                      id="start-at"
+                      type="datetime-local"
+                      value={startAt}
+                      onChange={(e) => setStartAt(e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="end-at">Fim do leilão</label>
+                    <input
+                      id="end-at"
+                      type="datetime-local"
+                      value={endAt}
+                      onChange={(e) => setEndAt(e.target.value)}
+                    />
+                  </div>
+                  {lotError && <p className="msg msg-err">{lotError}</p>}
+                  {lotMsg && <p className="msg msg-ok">{lotMsg}</p>}
+                  <button className="btn btn-primary btn-block" disabled={busy}>
+                    {busy ? "Criando…" : "🔨 Publicar lote"}
+                  </button>
+                </form>
+              </>
+            ) : (
+              <div className="create-empty">
+                <span className="create-empty-icon">🖼</span>
+                <h2>Publicar um novo lote</h2>
+                <p className="muted">
+                  Pesquise uma obra à esquerda e selecione-a. O formulário de
+                  criação aparece aqui mesmo, sem precisar de rolar a página.
+                </p>
               </div>
             )}
           </div>
-        )}
-      </div>
-
-      {/* Criar lote */}
-      {selected && (
-        <div className="panel-section card">
-          <h2>2. Criar lote com "{selected.title}"</h2>
-          <form onSubmit={createLot} className="form">
-            <div className="fields-row">
-              <div className="field">
-                <label htmlFor="start-price">Lance inicial (R$)</label>
-                <input
-                  id="start-price"
-                  value={startPrice}
-                  onChange={(e) => setStartPrice(e.target.value)}
-                  placeholder="10.000,00"
-                  inputMode="decimal"
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="min-increment">Incremento mínimo (R$)</label>
-                <input
-                  id="min-increment"
-                  value={minIncrement}
-                  onChange={(e) => setMinIncrement(e.target.value)}
-                  placeholder="1.000,00"
-                  inputMode="decimal"
-                />
-              </div>
-            </div>
-            <div className="fields-row">
-              <div className="field">
-                <label htmlFor="start-at">Início do leilão</label>
-                <input
-                  id="start-at"
-                  type="datetime-local"
-                  value={startAt}
-                  onChange={(e) => setStartAt(e.target.value)}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="end-at">Fim do leilão</label>
-                <input
-                  id="end-at"
-                  type="datetime-local"
-                  value={endAt}
-                  onChange={(e) => setEndAt(e.target.value)}
-                />
-              </div>
-            </div>
-            {lotError && <p className="msg msg-err">{lotError}</p>}
-            {lotMsg && <p className="msg msg-ok">{lotMsg}</p>}
-            <div className="form-actions">
-              <button className="btn btn-primary" disabled={busy}>
-                {busy ? "Criando…" : "🔨 Criar Lote"}
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => setSelected(null)}
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Meus lotes */}
-      <div className="panel-section">
-        <h2>Meus lotes</h2>
-        {cancelMsg && (
-          <p className={cancelMsg.includes("cancelado") ? "msg msg-ok" : "msg msg-err"}>
-            {cancelMsg}
-          </p>
-        )}
-        {!data ? (
-          <p className="muted">Carregando…</p>
-        ) : data.lots.length === 0 ? (
-          <p className="muted">Você ainda não criou nenhum lote.</p>
-        ) : (
-          <div className="lots-table-wrap card">
-            <table className="bids-table">
-              <thead>
-                <tr>
-                  <th>Título</th>
-                  <th>Status</th>
-                  <th>Fim</th>
-                  <th>Lance atual</th>
-                  <th>Lances</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.lots.map((l) => (
-                  <tr key={l.id}>
-                    <td>
-                      <a href={`/lots/${l.id}`}>{l.title}</a>
-                    </td>
-                    <td>
-                      <span className={`badge badge-${l.status}`}>
-                        {statusLabel[l.status]}
-                      </span>
-                    </td>
-                    <td className="muted">{formatDateTime(l.endAt)}</td>
-                    <td>
-                      {l.currentBidCents !== null
-                        ? formatMoney(l.currentBidCents)
-                        : <span className="muted">—</span>}
-                    </td>
-                    <td className="muted">{l.bidCount}</td>
-                    <td>
-                      {(l.status === "scheduled" || l.status === "live") && (
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={() => cancelLot(l.id, l.title, l.bidCount)}
-                        >
-                          Cancelar
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        </aside>
       </div>
     </div>
   );
