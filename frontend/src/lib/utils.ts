@@ -40,7 +40,13 @@ export function formatRemaining(ms: number): string {
 // ─── Tradução de erros da API ───
 export function errorMessage(e: unknown): string {
   const err = (e ?? {}) as ApiError;
-  const d = (err.details ?? {}) as Record<string, unknown>;
+
+  // details pode ser um array de issues Zod ou um objecto com campos extra
+  const details = err.details;
+  const d: Record<string, unknown> = Array.isArray(details)
+    ? {}
+    : ((details ?? {}) as Record<string, unknown>);
+
   switch (err.error) {
     case "BID_BELOW_MINIMUM":
       return typeof d.minCents === "number"
@@ -75,8 +81,15 @@ export function errorMessage(e: unknown): string {
       return "Sessão expirada. Entre novamente.";
     case "FORBIDDEN":
       return "Sem permissão para esta ação.";
-    case "VALIDATION_ERROR":
+    case "VALIDATION_ERROR": {
+      // O backend devolve err.issues do Zod — mostramos a primeira mensagem específica
+      // Ex: "A senha deve conter pelo menos uma letra maiúscula"
+      if (Array.isArray(details) && details.length > 0) {
+        const first = details[0] as Record<string, unknown>;
+        if (typeof first?.message === "string") return first.message;
+      }
       return "Dados inválidos. Verifique os campos.";
+    }
     case "EXTERNAL_API_UNAVAILABLE":
       return "Serviço de busca indisponível. Tente novamente.";
     case "ARTWORK_NOT_FOUND":

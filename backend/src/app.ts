@@ -15,7 +15,21 @@ import { receiptsRouter, myRouter } from "./modules/receipts/receipts.routes";
 export const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: env.FRONTEND_URL }));
+const allowedOrigins = [
+  env.FRONTEND_URL,
+  // aceitar também a porta de dev quando FRONTEND_URL aponta para preview
+  env.FRONTEND_URL.replace(":4173", ":5173"),
+  env.FRONTEND_URL.replace(":5173", ":4173"),
+].filter((v, i, arr) => arr.indexOf(v) === i);
+
+app.use(cors({
+  origin: (origin, cb) => {
+    // permitir chamadas sem origin (curl, Postman, SSR)
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error("CORS: origin not allowed"));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 app.get(

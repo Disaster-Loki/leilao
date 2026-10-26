@@ -13,8 +13,10 @@ const registerSchema = z.object({
     .string()
     .min(8, "A senha deve ter pelo menos 8 caracteres")
     .max(100)
-    .regex(/[a-zA-Z]/, "A senha deve conter pelo menos uma letra")
-    .regex(/[0-9]/, "A senha deve conter pelo menos um número"),
+    .regex(/[a-z]/, "A senha deve conter pelo menos uma letra minúscula")
+    .regex(/[A-Z]/, "A senha deve conter pelo menos uma letra maiúscula")
+    .regex(/[0-9]/, "A senha deve conter pelo menos um número")
+    .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, "A senha deve conter pelo menos um carácter especial (ex: !@#$%)"),
   role: z.enum(["auctioneer", "bidder"]),
 });
 

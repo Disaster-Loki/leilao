@@ -30,6 +30,31 @@ leilao/
 - PostgreSQL 14 ou superior
 - Git
 
+## Como rodar com Docker Compose (recomendado)
+
+> Requer apenas [Docker](https://docs.docker.com/get-docker/) e [Docker Compose](https://docs.docker.com/compose/install/). Não é necessário instalar Node.js ou PostgreSQL localmente.
+
+```bash
+# Clone o repositório e entre na pasta
+git clone <url-do-repo> && cd leilao
+
+# Suba tudo (banco, migração, seed, back-end e front-end)
+docker compose up
+```
+
+Aguarde até ver `✅ Seed concluído` no log do serviço `migrate`. Depois abra:
+
+| Serviço | URL |
+|---|---|
+| Front-end | http://localhost:5173 |
+| API | http://localhost:3000 |
+
+Para parar e apagar os volumes (banco):
+
+```bash
+docker compose down -v
+```
+
 ## Como rodar localmente
 
 ### 1. Banco de dados

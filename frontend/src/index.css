@@ -325,3 +325,38 @@ input:focus, select:focus { outline: none; border-color: var(--primary); }
 .audit-footer { padding: 1.25rem; }
 .audit-steps { list-style: decimal; padding-left: 1.25rem; display: flex; flex-direction: column; gap: .75rem; font-size: .88rem; color: var(--muted); }
 .audit-steps strong { color: var(--text); }
+
+/* ─── Password strength indicator ─── */
+.pwd-input-wrap { position: relative; display: flex; }
+.pwd-input-wrap input { flex: 1; padding-right: 2.8rem; }
+.pwd-toggle {
+  position: absolute; right: .6rem; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; font-size: 1rem;
+  color: var(--muted); padding: .2rem; line-height: 1;
+}
+.pwd-toggle:hover { color: var(--text); }
+
+.pwd-strength { margin-top: .5rem; }
+.pwd-bar-track {
+  height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: .6rem;
+}
+.pwd-bar-fill {
+  height: 100%; border-radius: 4px;
+  transition: width .3s ease, background .3s ease;
+}
+
+.pwd-rules {
+  list-style: none; display: flex; flex-direction: column; gap: .25rem;
+}
+.pwd-rule {
+  display: flex; align-items: center; gap: .45rem;
+  font-size: .78rem; color: var(--muted);
+  transition: color .2s;
+}
+.pwd-rule-ok { color: var(--ok); }
+.pwd-rule-icon {
+  font-size: .85rem; width: 1rem; text-align: center; flex-shrink: 0;
+  transition: color .2s;
+}
+.pwd-rule-ok .pwd-rule-icon { color: var(--ok); }
+

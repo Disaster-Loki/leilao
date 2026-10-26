@@ -2,7 +2,8 @@ const API = import.meta.env.VITE_API_URL as string;
 
 export interface ApiError {
   error: string;
-  details?: Record<string, unknown>;
+  // details pode ser um array (Zod issues) ou um objecto com campos extra
+  details?: Record<string, unknown> | unknown[];
 }
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
