@@ -422,18 +422,21 @@ O projeto seguiu um plano estruturado:
 > ⚠️ **Ainda não está publicado.** A configuração está pronta; falta executar o
 > deploy e substituir esta nota pelas URLs finais.
 
-O repositório inclui `render.yaml` (Render Blueprint) e `vercel.json`, por isso
-não é necessário criar Dockerfiles.
+O repositório inclui `render.yaml` (Render Blueprint) e
+`frontend/vercel.json`, por isso não é necessário criar Dockerfiles.
 
-**Back-end + PostgreSQL no Render:**
-- Importe o repositório como Blueprint; o `render.yaml` cria o serviço Node 22 e
-  a base PostgreSQL.
+**Back-end no Render + PostgreSQL no Neon:**
+- Crie uma base PostgreSQL no Neon e copie a connection string (com
+  `sslmode=require`).
+- Importe o repositório como Blueprint. O `render.yaml` cria apenas o serviço
+  Node 22; a base fica no Neon (não é criada outra base no Render).
 - Root directory: `backend`
 - Build: `npm ci --include=dev && npm run build`
 - Start: `npm run start:deploy` (migra, corre o seed idempotente e arranca a API)
 - Health check: `/health`
-- Variáveis: `DATABASE_URL` (ligada ao banco do blueprint), `JWT_SECRET`,
+- Variáveis: `DATABASE_URL` (connection string do Neon), `JWT_SECRET`,
   `HMAC_SECRET` (gerados) e `FRONTEND_URL` (URL do Vercel).
+- A variável chama-se **`DATABASE_URL`**, não `DB_DATABASE` ou `DB_HOST`.
 
 **Front-end no Vercel:**
 - Importe o mesmo repositório com **Root Directory = `frontend`**.
