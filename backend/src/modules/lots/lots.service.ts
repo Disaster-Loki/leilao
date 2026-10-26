@@ -118,16 +118,30 @@ export async function cancelLot(lotId: string, auctioneerId: string) {
   try {
     await client.query("BEGIN");
 
-    // Mesmo lock que os lances vão usar: cancelar e dar lance não se atropelam
+    // Mesmo lock que os lances usam — cancelar e dar lance não se atropelam
     const { rows } = await client.query(
-      "SELECT auctioneer_id, bid_count, cancelled_at, settled_at FROM lots WHERE id = $1 FOR UPDATE",
+      `SELECT auctioneer_id, bid_count, cancelled_at, settled_at,
+              leader_id, current_bid_cents FROM lots WHERE id = $1 FOR UPDATE`,
       [lotId]
     );
     const lot = rows[0];
     if (!lot) throw new AppError(404, "LOT_NOT_FOUND");
     if (lot.auctioneer_id !== auctioneerId) throw new AppError(403, "FORBIDDEN");
     if (lot.cancelled_at) throw new AppError(409, "LOT_ALREADY_CANCELLED");
-    if (lot.bid_count > 0) throw new AppError(409, "LOT_HAS_BIDS");
+    if (lot.settled_at) throw new AppError(409, "LOT_ALREADY_SETTLED");
+
+    // Estorno automático: devolve o valor comprometido ao licitante líder
+    if (lot.leader_id && lot.current_bid_cents) {
+      await client.query(
+        "UPDATE wallets SET committed_cents = committed_cents - $1 WHERE user_id = $2",
+        [lot.current_bid_cents, lot.leader_id]
+      );
+      await client.query(
+        `INSERT INTO wallet_transactions (user_id, type, amount_cents, lot_id)
+         VALUES ($1, 'deposit', $2, $3)`,
+        [lot.leader_id, lot.current_bid_cents, lotId]
+      );
+    }
 
     await client.query("UPDATE lots SET cancelled_at = now() WHERE id = $1", [lotId]);
     await client.query("COMMIT");
@@ -138,3 +152,4 @@ export async function cancelLot(lotId: string, auctioneerId: string) {
     client.release();
   }
 }
+

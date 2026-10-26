@@ -108,12 +108,15 @@ export default function AuctioneerPanel() {
     }
   }
 
-  async function cancelLot(lotId: string, title: string) {
-    if (!confirm(`Cancelar "${title}"?`)) return;
+  async function cancelLot(lotId: string, title: string, bidCount: number) {
+    const msg = bidCount > 0
+      ? `Cancelar "${title}"?\n\nO lote tem ${bidCount} lance(s). O valor comprometido será devolvido automaticamente ao licitante.`
+      : `Cancelar "${title}"?`;
+    if (!confirm(msg)) return;
     setCancelMsg(null);
     try {
       await api(`/lots/${lotId}/cancel`, { method: "POST" });
-      setCancelMsg(`Lote "${title}" cancelado.`);
+      setCancelMsg(`Lote "${title}" cancelado${bidCount > 0 ? " — estorno realizado." : "."}`);
       load();
     } catch (err) {
       setCancelMsg(errorMessage(err));
@@ -308,10 +311,10 @@ export default function AuctioneerPanel() {
                     </td>
                     <td className="muted">{l.bidCount}</td>
                     <td>
-                      {l.status === "scheduled" && (
+                      {(l.status === "scheduled" || l.status === "live") && (
                         <button
                           className="btn btn-sm btn-danger"
-                          onClick={() => cancelLot(l.id, l.title)}
+                          onClick={() => cancelLot(l.id, l.title, l.bidCount)}
                         >
                           Cancelar
                         </button>

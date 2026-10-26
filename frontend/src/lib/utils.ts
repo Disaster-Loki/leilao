@@ -65,9 +65,11 @@ export function errorMessage(e: unknown): string {
     case "LOT_NOT_FOUND":
       return "Lote não encontrado.";
     case "LOT_HAS_BIDS":
-      return "Não é possível cancelar um lote com lances.";
+      return "Não é possível cancelar um lote já encerrado com arremate.";
     case "LOT_ALREADY_CANCELLED":
       return "Este lote já foi cancelado.";
+    case "LOT_ALREADY_SETTLED":
+      return "Não é possível cancelar um lote já arrematado.";
     case "RECEIPT_NOT_FOUND":
       return "Comprovante não encontrado.";
     case "WALLET_NOT_FOUND":

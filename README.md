@@ -256,6 +256,16 @@ simultâneo não cause um falso alarme.
 - A auditoria mostra pseudónimos (`Licitante #XXXXXX`) derivados por HMAC de
   (utilizador, lote), sem dados pessoais.
 
+## Funcionalidades opcionais implementadas
+
+| Opcional | Implementado |
+|---|---|
+| Busca e filtro de lotes | ✅ Campo de pesquisa na vitrine (título ou artista) |
+| Cancelamento com estorno automático | ✅ O leiloeiro pode cancelar lotes agendados e ao vivo; o valor comprometido é devolvido automaticamente ao licitante líder |
+| Docker Compose | ✅ `docker compose up` sobe tudo (db + backend + frontend) |
+| Testes automatizados | ✅ `run_tests.sh` — 12 categorias, 30+ verificações |
+| Dark Mode | ✅ Toggle ☀️/🌙 no navbar; preferência guardada em `localStorage` |
+
 ## Limitações e comportamentos conhecidos
 
 - O papel (leiloeiro ou licitante) é escolhido livremente no registo, porque o
