@@ -16,8 +16,8 @@ export const PLACEHOLDER =
   );
 
 /**
- * O Art Institute bloqueia pedidos de imagem feitos diretamente pelo browser
- * (Cloudflare). Passamos as imagens pela nossa API para que funcionem sempre.
+ * O backend normalmente já devolve imagens do Wikimedia Commons (CDN aberto).
+ * URLs antigas do AIC ainda passam pelo nosso proxy como fallback.
  */
 export function imageSrc(url: string | null | undefined): string {
   if (!url) return PLACEHOLDER;

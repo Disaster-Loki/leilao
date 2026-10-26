@@ -14,6 +14,11 @@ import { computeBidHash, GENESIS } from "../modules/bids/hash";
 
 const PASSWORD = "Leilao@123"; // ≥8 chars, maiúscula, minúscula, número e especial
 
+// O AIC bloqueia o hotlink das imagens IIIF via Cloudflare. O Wikimedia
+// Commons tem o mesmo quadro em domínio público, servido por um CDN aberto.
+const SEED_IMAGE_URL =
+  "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/65/Claude_Monet_-_Water_Lilies_-_1933.1157_-_Art_Institute_of_Chicago.jpg/960px-Claude_Monet_-_Water_Lilies_-_1933.1157_-_Art_Institute_of_Chicago.jpg";
+
 const users = [
   {
     email: "leiloeiro@leilao.com",
@@ -101,6 +106,13 @@ async function seed() {
 
     if (existingLot[0]) {
       lotId = existingLot[0].id;
+      // Corrige lotes antigos que apontavam para a imagem bloqueada do AIC.
+      await client.query(
+        `UPDATE lots
+         SET image_url = $1
+         WHERE id = $2 AND (image_url IS NULL OR image_url LIKE '%artic.edu%')`,
+        [SEED_IMAGE_URL, lotId]
+      );
       console.log("Lote já existe, reutilizando:", lotId);
     } else {
       const { rows: lotRows } = await client.query(
@@ -118,7 +130,7 @@ async function seed() {
           "Claude Monet",
           "1906",
           "Oil on canvas",
-          "https://www.artic.edu/iiif/2/3c27b499-af56-f0d5-93b5-a7f2f1ad5813/full/843,/0/default.jpg",
+          SEED_IMAGE_URL,
           JSON.stringify({
             place_of_origin: "France",
             dimensions: "89.9 × 94.1 cm (35 3/8 × 37 1/16 in.)",

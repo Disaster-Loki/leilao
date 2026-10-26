@@ -17,10 +17,10 @@ externalRouter.get(
 );
 
 /*
- * Proxy de imagens do Art Institute.
- * O site da instituição está atrás de Cloudflare e bloqueia hotlinking /
- * pedidos sem User-Agent de browser. Servir a imagem pelo nosso domínio
- * resolve o bloqueio e ainda permite cache no servidor.
+ * Proxy de imagens do Art Institute (fallback de compatibilidade).
+ * O AIC bloqueia hotlink via Cloudflare e também desafia IPs de datacenter,
+ * por isso as imagens novas são resolvidas no Wikimedia Commons. Este proxy
+ * mantém a compatibilidade com lotes antigos e faz cache no servidor.
  */
 const ALLOWED_IMAGE_HOSTS = new Set(["www.artic.edu", "artic.edu"]);
 const IMAGE_CACHE_TTL_MS = 60 * 60 * 1000;

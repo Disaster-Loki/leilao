@@ -13,7 +13,7 @@ lote com lances ao vivo, usando saldo simulado.
 | Front-end | React 19 + Vite + TypeScript |
 | Back-end | Node.js + Express 5 + TypeScript |
 | Banco de dados | PostgreSQL (migrations com `node-pg-migrate`) |
-| API externa | Art Institute of Chicago (`api.artic.edu`) |
+| API externa | Art Institute of Chicago (`api.artic.edu`) e Wikimedia Commons (imagens) |
 
 ## Estrutura
 
@@ -58,8 +58,9 @@ leilao/
 - **Evolução da base de dados:** migrations versionadas em `backend/migrations`,
   script de reset para desenvolvimento e seed idempotente com dados de teste.
 - **Fronteira com a API externa:** o navegador nunca chama o Art Institute
-  diretamente; o backend faz a busca, guarda o snapshot no lote e serve as imagens
-  por proxy (`/external/image`), para a aplicação continuar funcional se a API cair.
+  diretamente; o backend faz a busca e guarda o snapshot no lote. As imagens
+  públicas são resolvidas no Wikimedia Commons (o AIC bloqueia hotlink via
+  Cloudflare); `/external/image` fica como proxy de recurso para URLs antigas do AIC.
 
 ## Pré-requisitos
 
@@ -207,9 +208,11 @@ As permissões são verificadas **no servidor** em cada rota (middleware
   sala, lances, auditoria e comprovante nunca dependem da API.
 - **Snapshot feito no servidor:** o front envia só o `externalId`; os dados do item
   vêm da API, não do cliente.
-- **Proxy de imagens:** o backend serve as imagens do Art Institute em
-  `/external/image?src=...` com cache e User-Agent de browser, evitando bloqueios
-  de hotlink e mantendo a vitrine/comprovante independentes do cliente externo.
+- **Imagens:** o AIC passou a devolver `403` (desafio Cloudflare) para pedidos de
+  imagem de terceiros, inclusive a partir do Render. O backend procura o mesmo
+  ficheiro de domínio público no Wikimedia Commons pelo `main_reference_number`
+  e guarda esse URL no lote. O proxy `/external/image?src=...` continua disponível
+  como fallback para URLs antigas do AIC, com cache e User-Agent de browser.
 - **Cancelamento:** só o dono do lote e só antes de liquidado. Usa o mesmo
   bloqueio de linha (`FOR UPDATE`) dos lances. Se já houver líder, o valor
   comprometido é libertado (volta ao disponível) na mesma transação.
@@ -278,8 +281,8 @@ sudo -u postgres psql -c "CREATE DATABASE leilao_test OWNER leilao;"
 createdb -h localhost -U leilao leilao_test
 ```
 
-O HTTP para `api.artic.edu` é simulado nos testes, por isso correm offline e de
-forma determinística; a base de dados é real.
+O HTTP para `api.artic.edu` e para o Wikimedia Commons é simulado nos testes,
+por isso correm offline e de forma determinística; a base de dados é real.
 
 | Categoria | O que cobre |
 |---|---|
@@ -357,7 +360,8 @@ simultâneo não cause um falso alarme.
   enunciado não define como alguém se torna leiloeiro. Numa aplicação real,
   isso seria restrito.
 - Recuperação de senha não foi implementada (fora do escopo do enunciado).
-- A imagem do lote depende do servidor de imagens do Art Institute of Chicago.
+- A imagem do lote depende do CDN do Wikimedia Commons. Se a obra não existir
+  lá, o cartão mostra o placeholder "Imagem indisponível".
 - O front usa polling (a cada 2–5 s) em vez de WebSocket. Num produto real
   usaria SSE ou WebSocket; polling foi suficiente para os requisitos do teste.
 
@@ -374,7 +378,7 @@ Todo o back-end foi desenvolvido **sem assistência de IA**. Isto incluiu:
 - Transações com `SELECT ... FOR UPDATE` para concorrência segura
 - Algoritmo da cadeia de hashes HMAC-SHA256
 - Lógica de anti-sniping, liquidação idempotente e pseudónimos
-- Integração com a API do Art Institute of Chicago
+- Integração com a API do Art Institute of Chicago e imagens do Wikimedia Commons
 
 O objetivo era provar domínio real das tecnologias avaliadas (PostgreSQL com
 locks, consistência financeira, segurança, testes) antes de qualquer auxílio externo.

@@ -33,7 +33,11 @@ const ARTWORK = {
   place_of_origin: "Portugal",
   dimensions: "100 × 80 cm",
   classification_title: "Pintura",
+  main_reference_number: "123.456",
 };
+
+const COMMONS_IMAGE =
+  "https://upload.wikimedia.org/wikipedia/commons/test/water-lilies.jpg";
 
 const realFetch = globalThis.fetch;
 let externalDown = false;
@@ -58,6 +62,22 @@ function mockFetch() {
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url =
       typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+
+    if (url.startsWith("https://commons.wikimedia.org/")) {
+      return new Response(
+        JSON.stringify({
+          query: {
+            pages: {
+              1: {
+                index: 1,
+                imageinfo: [{ thumburl: `${COMMONS_IMAGE}?width=960` }],
+              },
+            },
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    }
 
     if (url.startsWith("https://api.artic.edu/")) {
       if (externalDown) throw new TypeError("fetch failed");
