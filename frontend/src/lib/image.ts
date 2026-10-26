@@ -1,4 +1,4 @@
-const API = import.meta.env.VITE_API_URL as string;
+const API = import.meta.env.API_URL as string;
 
 export const PLACEHOLDER =
   "data:image/svg+xml;utf8," +

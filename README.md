@@ -172,7 +172,7 @@ npm run build   # gera dist/ estático
 
 | Variável | Descrição |
 |---|---|
-| `VITE_API_URL` | URL base da API |
+| `API_URL` | URL base da API (pública) |
 
 ## Papéis e permissões
 
@@ -443,8 +443,10 @@ O repositório inclui `render.yaml` (Render Blueprint) e
 - Não defina Install/Build/Output manualmente no dashboard: o
   `frontend/vercel.json` já usa `npm ci`, `npm run build`, output `dist` e o
   rewrite `/* → /index.html` para o React Router.
-- Variável de ambiente (Production e Preview): `VITE_API_URL` = URL pública do
+- Variável de ambiente (Production e Preview): `API_URL` = URL pública do
   Render. É uma variável de build; depois de a criar, faça novo deploy.
+- O `vite.config.ts` expõe o prefixo `API_` ao browser, por isso não é preciso
+  `VITE_API_URL`. Nunca uses este prefixo para segredos.
 
 Depois do deploy, confirme `GET /health`, faça login com as contas do seed e
 copie as duas URLs para este README.

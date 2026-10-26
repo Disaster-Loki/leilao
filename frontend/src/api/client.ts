@@ -1,4 +1,4 @@
-const API = import.meta.env.VITE_API_URL as string | undefined;
+const API = import.meta.env.API_URL as string | undefined;
 
 export interface ApiError {
   error: string;
