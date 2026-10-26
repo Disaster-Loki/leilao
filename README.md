@@ -156,7 +156,31 @@ Rodar `npm run seed` na pasta `backend`. Senha de todos: `123456`.
 
 ## Histórico à prova de adulteração
 
-_A preencher na etapa de auditoria._
+**Técnica:** cadeia de hashes com HMAC-SHA256.
+
+Cada lance guarda `prev_hash` (hash do lance anterior, ou `GENESIS` no primeiro) e
+`hash = HMAC(HMAC_SECRET, [prev_hash, lote, sequência, licitante, valor, data])`.
+O segredo fica em variável de ambiente, fora do banco: quem só tem acesso ao banco
+não consegue recalcular hashes válidos.
+
+A página `/audit/:lotId` (pública) recalcula tudo e verifica:
+1. **Cadeia:** sequência sem buracos, `prev_hash` encadeado e hash de cada lance.
+   Detecta valor alterado, licitante trocado, lance inserido e lance removido do meio.
+2. **Lote:** `head_hash` (hash do último lance) e `bid_count` guardados no lote.
+   Detecta remoção do último lance, que a cadeia sozinha não vê.
+3. **Fecho:** `final_hash` e valor do comprovante, e o movimento financeiro da venda.
+   Detecta quem apagou o último lance e também "corrigiu" o lote.
+
+A leitura é feita num snapshot (`REPEATABLE READ`) para que um lance legítimo
+simultâneo não cause um falso alarme.
+
+**Limitações assumidas:**
+- Quem tiver acesso ao banco **e** ao `HMAC_SECRET` consegue forjar a cadeia.
+- Quem apagar o último lance e **também** corrigir lote, comprovante e movimentos
+  financeiros de forma coerente não é detetado pela cadeia. A defesa é o comprovante
+  partilhado: o vencedor guarda o `finalHash`, que serve de âncora externa.
+- A auditoria mostra pseudónimos (`Licitante #XXXXXX`) derivados por HMAC de
+  (utilizador, lote), sem dados pessoais.
 
 ## Limitações e comportamentos inesperados
 
