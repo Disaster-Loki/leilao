@@ -83,15 +83,17 @@ export default function Login() {
             />
           </div>
           <div className="field">
-            <label htmlFor="auth-password">Senha</label>
+            <label htmlFor="auth-password">
+              Senha{mode === "register" && <span className="muted" style={{fontWeight:400}}> — mín. 8 caracteres, 1 letra e 1 número</span>}
+            </label>
             <input
               id="auth-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••"
+              placeholder={mode === "register" ? "Ex: Leilao123" : "••••••••"}
               required
-              minLength={6}
+              minLength={mode === "register" ? 8 : 1}
             />
           </div>
 
@@ -122,21 +124,21 @@ export default function Login() {
             <button
               type="button"
               className="chip"
-              onClick={() => { setEmail("leiloeiro@leilao.com"); setPassword("123456"); setMode("login"); }}
+              onClick={() => { setEmail("leiloeiro@leilao.com"); setPassword("Leilao123"); setMode("login"); }}
             >
               🔨 Leiloeiro
             </button>
             <button
               type="button"
               className="chip"
-              onClick={() => { setEmail("ana@leilao.com"); setPassword("123456"); setMode("login"); }}
+              onClick={() => { setEmail("ana@leilao.com"); setPassword("Leilao123"); setMode("login"); }}
             >
               🙋 Ana
             </button>
             <button
               type="button"
               className="chip"
-              onClick={() => { setEmail("bruno@leilao.com"); setPassword("123456"); setMode("login"); }}
+              onClick={() => { setEmail("bruno@leilao.com"); setPassword("Leilao123"); setMode("login"); }}
             >
               🙋 Bruno
             </button>
