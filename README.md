@@ -166,13 +166,42 @@ As permissões são verificadas **no servidor** em cada rota (middleware
 
 ## Credenciais de teste (seed)
 
-Rodar `npm run seed` na pasta `backend`. Senha de todos: `123456`.
+Rodar `npm run seed` na pasta `backend`.
 
-| Papel | Email | Saldo inicial |
+| Papel | Email | Senha |
 |---|---|---|
-| Leiloeiro | leiloeiro@leilao.com | 0,00 |
-| Licitante | ana@leilao.com | 5.000,00 |
-| Licitante | bruno@leilao.com | 5.000,00 |
+| Leiloeiro | leiloeiro@leilao.com | `Leilao123` |
+| Licitante | ana@leilao.com | `Leilao123` |
+| Licitante | bruno@leilao.com | `Leilao123` |
+
+O seed cria automaticamente um **lote ao vivo (Water Lilies — Monet)** com 3 lances já feitos (Ana está ganhando), para que o avaliador possa percorrer o fluxo completo sem montar nada do zero. O seed é **idempotente**: pode ser executado várias vezes sem duplicar dados.
+
+Após o seed, os URLs do lote e da auditoria são impressos no terminal.
+
+## Testes de integração (`run_tests.sh`)
+
+> O ficheiro está no `.gitignore` — fica só em ambiente local, nunca vai ao repositório.
+
+Cobre 12 categorias, 30+ verificações:
+
+| Categoria | O que testa |
+|---|---|
+| Auth | Registo, login, senha fraca, email inválido, email duplicado, credenciais erradas |
+| Carteira | Consulta, depósito, depósito negativo, leiloeiro proibido de depositar |
+| API externa | Busca por obra na Art Institute API |
+| Lotes | Criar (agendado e ao vivo), licitante proibido, cancelamento, cancelado fora da vitrine |
+| Lances | Mínimo, auto-lance, saldo insuficiente, incremental, leiloeiro proibido |
+| Saldo | Comprometido correto, devolvido ao ser superado |
+| Sala | Status ao vivo, histórico de lances |
+| Arremates | Listagem pessoal |
+| Auditoria | Cadeia de hashes íntegra |
+| Segurança | 4 rotas protegidas sem token |
+
+```bash
+cd /home/wundu/projects/leilao
+chmod +x run_tests.sh
+BASE_URL=http://localhost:3000 ./run_tests.sh
+```
 
 ## Histórico à prova de adulteração
 
