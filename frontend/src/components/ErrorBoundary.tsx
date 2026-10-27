@@ -16,8 +16,8 @@ export default class ErrorBoundary extends Component<Props, State> {
     return { error };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("Erro de renderização:", error, info);
+  componentDidCatch(_error: Error, _info: ErrorInfo) {
+    // Silencioso: a UI mostra o erro e permite recarregar.
   }
 
   render() {

@@ -1,20 +1,32 @@
 import { useEffect, useState } from "react";
 
-/**
- * Relógio alinhado com o servidor.
- * offset = diferença entre a hora do servidor e a hora do cliente, para a
- * contagem regressiva não depender do relógio (possivelmente errado) do browser.
- */
 export function useServerNow(serverNowIso: string) {
-  const [offsetMs] = useState(
+  const [offsetMs, setOffsetMs] = useState(
     () => new Date(serverNowIso).getTime() - Date.now()
   );
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 500);
-    return () => clearInterval(timer);
-  }, []);
+    const refreshOffset = () => {
+      setOffsetMs(new Date(serverNowIso).getTime() - Date.now());
+    };
+
+    const timer = setInterval(() => {
+      setNow(Date.now());
+      refreshOffset();
+    }, 60000);
+
+    const onVisible = () => {
+      setNow(Date.now());
+      refreshOffset();
+    };
+
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [serverNowIso]);
 
   return now + offsetMs;
 }

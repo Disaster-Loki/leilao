@@ -7,6 +7,7 @@ import {
   errorMessage,
   formatMoney,
   formatDateTime,
+  getBrowserTimeZoneLabel,
   parseMoney,
   toInputMoney,
 } from "../lib/utils";
@@ -184,9 +185,15 @@ export default function LotRoom() {
               </>
             )}
             <dt>Início</dt>
-            <dd>{formatDateTime(lot.startAt)}</dd>
+            <dd>
+              {formatDateTime(lot.startAt)}
+              <span className="muted"> ({getBrowserTimeZoneLabel()})</span>
+            </dd>
             <dt>Fim</dt>
-            <dd>{formatDateTime(lot.endAt)}</dd>
+            <dd>
+              {formatDateTime(lot.endAt)}
+              <span className="muted"> ({getBrowserTimeZoneLabel()})</span>
+            </dd>
           </dl>
           <Link to={`/audit/${lot.id}`} className="audit-link">
             <Icon name="shield" size={15} /> Auditar histórico de lances

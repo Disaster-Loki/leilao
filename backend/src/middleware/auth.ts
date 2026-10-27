@@ -36,7 +36,6 @@ export const requireRole =
     next();
   };
 
-  // Não exige login, mas se houver token válido preenche req.user
 export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (header?.startsWith("Bearer ")) {
@@ -44,7 +43,7 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
       const payload = jwt.verify(header.slice(7), env.JWT_SECRET) as AuthUser;
       req.user = { id: payload.id, role: payload.role };
     } catch {
-      // token inválido numa rota pública: trata como visitante
+      // ignore invalid token on public routes
     }
   }
   next();

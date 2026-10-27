@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { errorMessage, formatMoney } from "../lib/utils";
+import { errorMessage, formatMoney, formatDateTime, getBrowserTimeZoneLabel } from "../lib/utils";
 import type { AuditResult } from "../types";
 import Icon from "../components/Icon";
 
@@ -149,7 +149,8 @@ export default function AuditPage() {
                       <td>{b.bidder}</td>
                       <td>{formatMoney(b.amountCents)}</td>
                       <td className="muted">
-                        {new Date(b.createdAt).toLocaleString("pt-BR")}
+                        {formatDateTime(b.createdAt)}
+                        <span className="muted"> ({getBrowserTimeZoneLabel()})</span>
                       </td>
                       <td>
                         <span className="mono hash-mini" title={b.hash}>

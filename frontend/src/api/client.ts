@@ -2,7 +2,6 @@ const API = import.meta.env.API_URL as string | undefined;
 
 export interface ApiError {
   error: string;
-  // details pode ser um array (Zod issues) ou um objecto com campos extra
   details?: Record<string, unknown> | unknown[];
 }
 

@@ -22,13 +22,11 @@ async function reset() {
     await client.query("DROP SCHEMA IF EXISTS public CASCADE");
     await client.query("CREATE SCHEMA public");
     await client.query("GRANT ALL ON SCHEMA public TO public");
-    console.log("Base de dados limpa (schema public recriado).");
   } finally {
     await client.end();
   }
 }
 
-reset().catch((err) => {
-  console.error("Falha ao limpar a base de dados:", err);
+reset().catch(() => {
   process.exit(1);
 });

@@ -3,11 +3,11 @@ import { env } from "./config/env";
 import { pool } from "./db/pool";
 import { settleDueLots } from "./modules/settlement/settlement.service";
 
-const server = app.listen(env.PORT, () => console.log(`API on :${env.PORT}`));
+const server = app.listen(env.PORT);
 
 // Liquidação periódica. A liquidação preguiçosa cobre o caso do servidor ter estado a dormir.
 const settlementTimer = setInterval(() => {
-  settleDueLots().catch((e) => console.error("settlement:", e));
+  settleDueLots().catch(() => undefined);
 }, 10_000);
 
 let shuttingDown = false;
@@ -15,12 +15,10 @@ let shuttingDown = false;
 async function shutdown(signal: string) {
   if (shuttingDown) return;
   shuttingDown = true;
-  console.log(`${signal} recebido, a encerrar…`);
 
   clearInterval(settlementTimer);
 
   const forceExit = setTimeout(() => {
-    console.error("Encerramento demorou demasiado, a forçar saída.");
     server.closeAllConnections?.();
     process.exit(1);
   }, 10_000);
@@ -30,8 +28,8 @@ async function shutdown(signal: string) {
     clearTimeout(forceExit);
     try {
       await pool.end();
-    } catch (err) {
-      console.error("Erro ao fechar o pool:", err);
+    } catch {
+      // Ignora falha ao encerrar o pool.
     }
     process.exit(0);
   });

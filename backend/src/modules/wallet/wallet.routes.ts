@@ -3,13 +3,18 @@ import { z } from "zod";
 import { asyncHandler } from "../../middleware/error";
 import { requireAuth, requireRole } from "../../middleware/auth";
 import * as service from "./wallet.service";
+import { APP_MESSAGES } from "../../messages";
 
 export const walletRouter = Router();
 
 walletRouter.use(requireAuth);
 
 const depositSchema = z.object({
-  amountCents: z.number().int().positive().max(100_000_000), // teto: 1.000.000,00
+  amountCents: z
+    .number()
+    .int(APP_MESSAGES.validation.integer)
+    .positive(APP_MESSAGES.validation.positive)
+    .max(100_000_000, APP_MESSAGES.validation.maxCents),
 });
 
 // Leitura: qualquer utilizador autenticado vê a própria carteira

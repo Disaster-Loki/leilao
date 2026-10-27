@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
-import { errorMessage, formatMoney, formatDateTime, parseMoney } from "../lib/utils";
+import { errorMessage, formatMoney, formatDateTime, fromDatetimeLocalInput, parseMoney, toDatetimeLocalInput } from "../lib/utils";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
 import Icon from "../components/Icon";
 import type { ArtworkResult, Lot } from "../types";
@@ -26,18 +26,17 @@ export default function AuctioneerPanel() {
   const [refreshKey, setRefreshKey] = useState(0);
   const createPanelRef = useRef<HTMLDivElement>(null);
 
-  // Criar lote: campos
   const [startPrice, setStartPrice] = useState("10000,00");
   const [minIncrement, setMinIncrement] = useState("1000,00");
   const [startAt, setStartAt] = useState(() => {
     const d = new Date();
     d.setMinutes(d.getMinutes() + 5);
-    return d.toISOString().slice(0, 16);
+    return toDatetimeLocalInput(d);
   });
   const [endAt, setEndAt] = useState(() => {
     const d = new Date();
     d.setHours(d.getHours() + 1);
-    return d.toISOString().slice(0, 16);
+    return toDatetimeLocalInput(d);
   });
 
   useEffect(() => {
@@ -48,7 +47,7 @@ export default function AuctioneerPanel() {
         const d = await api<PanelData>("/lots/mine");
         if (!cancelled) setData(d);
       } catch {
-        /* ignora erros de refresh */
+        // ignora erros de refresh
       }
     }
 
@@ -66,9 +65,7 @@ export default function AuctioneerPanel() {
     setSelected(null);
     setSearching(true);
     try {
-      const r = await api<ArtworkResult[]>(
-        `/external/artworks?q=${encodeURIComponent(searchQ.trim())}`
-      );
+      const r = await api<ArtworkResult[]>(`/external/artworks?q=${encodeURIComponent(searchQ.trim())}`);
       setResults(r);
     } catch (err) {
       setSearchError(errorMessage(err));
@@ -105,8 +102,8 @@ export default function AuctioneerPanel() {
           externalId: selected.externalId,
           startPriceCents,
           minIncrementCents,
-          startAt: new Date(startAt).toISOString(),
-          endAt: new Date(endAt).toISOString(),
+          startAt: fromDatetimeLocalInput(startAt).toISOString(),
+          endAt: fromDatetimeLocalInput(endAt).toISOString(),
         }),
       });
       setLotMsg(`Lote "${selected.title}" criado com sucesso!`);
@@ -317,7 +314,7 @@ export default function AuctioneerPanel() {
                             {statusLabel[l.status]}
                           </span>
                         </td>
-                        <td className="muted">{formatDateTime(l.endAt)}</td>
+                        <td className="muted">{formatDateTime(l.endAt)} <span className="muted">({Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"})</span></td>
                         <td>
                           {l.currentBidCents !== null
                             ? <strong>{formatMoney(l.currentBidCents)}</strong>
@@ -414,6 +411,9 @@ export default function AuctioneerPanel() {
                       onChange={(e) => setEndAt(e.target.value)}
                     />
                   </div>
+                  <p className="muted" style={{ marginTop: "-0.25rem" }}>
+                    Fuso do navegador: {Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"}
+                  </p>
                   {lotError && <p className="msg msg-err">{lotError}</p>}
                   {lotMsg && <p className="msg msg-ok">{lotMsg}</p>}
                   <button className="btn btn-primary btn-block" disabled={busy}>
@@ -426,8 +426,7 @@ export default function AuctioneerPanel() {
                 <span className="create-empty-icon"><Icon name="gallery" size={32} /></span>
                 <h2>Publicar um novo lote</h2>
                 <p className="muted">
-                  Pesquise uma obra à esquerda e selecione-a. O formulário de
-                  criação aparece aqui mesmo, sem precisar de rolar a página.
+                  Pesquise uma obra à esquerda e selecione-a. O formulário de criação aparece aqui mesmo, sem precisar de rolar a página.
                 </p>
               </div>
             )}

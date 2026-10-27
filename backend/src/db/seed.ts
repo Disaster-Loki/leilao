@@ -113,7 +113,6 @@ async function seed() {
          WHERE id = $2 AND (image_url IS NULL OR image_url LIKE '%artic.edu%')`,
         [SEED_IMAGE_URL, lotId]
       );
-      console.log("Lote já existe, reutilizando:", lotId);
     } else {
       const { rows: lotRows } = await client.query(
         `INSERT INTO lots (
@@ -143,7 +142,6 @@ async function seed() {
         ]
       );
       lotId = lotRows[0].id;
-      console.log("Lote criado:", lotId);
     }
 
     // ── Lances (se o lote ainda não tiver lances) ─────────────────────────
@@ -207,20 +205,9 @@ async function seed() {
          WHERE id = $5`,
         [sequence, lastAmount, leaderId, prevHash, lotId]
       );
-
-      console.log(`${sequence} lances inseridos. Líder: Ana (R$ 1.200,00)`);
-    } else {
-      console.log("Lote já tem lances, nada inserido.");
     }
 
     await client.query("COMMIT");
-    console.log("\nSeed concluído.\n");
-    console.log("Credenciais (senha: Leilao@123):");
-    console.log("  Leiloeiro: leiloeiro@leilao.com");
-    console.log("  Licitante: ana@leilao.com");
-    console.log("  Licitante: bruno@leilao.com");
-    console.log(`\nLote ao vivo: /lots/${lotId}`);
-    console.log(`Auditoria:    /audit/${lotId}`);
   } catch (err) {
     await client.query("ROLLBACK");
     throw err;

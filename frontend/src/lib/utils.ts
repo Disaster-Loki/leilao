@@ -8,11 +8,46 @@ export function formatMoney(cents: number): string {
   }).format(cents / 100);
 }
 
-export function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("pt-BR", {
+export function getBrowserTimeZoneLabel(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+}
+
+export function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
-  });
+  }).format(date);
+}
+
+export function formatTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+export function toDatetimeLocalInput(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+export function fromDatetimeLocalInput(value: string): Date {
+  const [datePart, timePart] = value.split("T");
+  if (!datePart || !timePart) return new Date(NaN);
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hours, minutes] = timePart.split(":").map(Number);
+  return new Date(year, month - 1, day, hours, minutes);
 }
 
 export function parseMoney(input: string): number | null {
@@ -41,7 +76,6 @@ export function formatRemaining(ms: number): string {
 export function errorMessage(e: unknown): string {
   const err = (e ?? {}) as ApiError;
 
-  // details pode ser um array de issues Zod ou um objecto com campos extra
   const details = err.details;
   const d: Record<string, unknown> = Array.isArray(details)
     ? {}
@@ -50,18 +84,18 @@ export function errorMessage(e: unknown): string {
   switch (err.error) {
     case "BID_BELOW_MINIMUM":
       return typeof d.minCents === "number"
-        ? `Lance abaixo do mínimo permitido (${formatMoney(d.minCents)}).`
-        : "Lance abaixo do mínimo permitido.";
+        ? `O seu lance está abaixo do mínimo permitido. O valor mínimo é ${formatMoney(d.minCents)}.`
+        : "O seu lance está abaixo do mínimo permitido.";
     case "INSUFFICIENT_BALANCE":
       return typeof d.availableCents === "number"
-        ? `Saldo insuficiente. Disponível: ${formatMoney(d.availableCents)}.`
+        ? `Saldo insuficiente. O valor disponível é ${formatMoney(d.availableCents)}.`
         : "Saldo insuficiente.";
     case "ALREADY_LEADING":
-      return "Você já está ganhando este lote.";
+      return "Já está a ganhar este lote, não pode cobrir o seu próprio lance.";
     case "LOT_NOT_STARTED":
-      return "Este lote ainda não foi iniciado.";
+      return "Este lote ainda não começou.";
     case "LOT_ENDED":
-      return "Este lote já foi encerrado.";
+      return "Este leilão já terminou.";
     case "LOT_NOT_FOUND":
       return "Lote não encontrado.";
     case "LOT_ALREADY_CANCELLED":
@@ -73,17 +107,15 @@ export function errorMessage(e: unknown): string {
     case "WALLET_NOT_FOUND":
       return "Carteira não encontrada.";
     case "INVALID_CREDENTIALS":
-      return "E-mail ou senha incorretos.";
+      return "E-mail ou palavra-passe incorretos.";
     case "EMAIL_ALREADY_EXISTS":
       return "Já existe uma conta com este e-mail.";
     case "UNAUTHENTICATED":
     case "INVALID_TOKEN":
-      return "Sessão expirada. Entre novamente.";
+      return "Sessão expirada. Inicie sessão novamente.";
     case "FORBIDDEN":
       return "Sem permissão para esta ação.";
     case "VALIDATION_ERROR": {
-      // O backend devolve err.issues do Zod — mostramos a primeira mensagem específica
-      // Ex: "A senha deve conter pelo menos uma letra maiúscula"
       if (Array.isArray(details) && details.length > 0) {
         const first = details[0] as Record<string, unknown>;
         if (typeof first?.message === "string") return first.message;
@@ -91,15 +123,15 @@ export function errorMessage(e: unknown): string {
       return "Dados inválidos. Verifique os campos.";
     }
     case "EXTERNAL_API_UNAVAILABLE":
-      return "Serviço de busca indisponível. Tente novamente.";
+      return "O serviço de busca está temporariamente indisponível. Tente novamente.";
     case "ARTWORK_NOT_FOUND":
       return "Obra não encontrada na API externa.";
     case "NETWORK_ERROR":
-      return "Sem conexão com o servidor. Tente novamente.";
+      return "Sem ligação com o servidor. Tente novamente.";
     case "API_NOT_CONFIGURED":
-      return "A URL da API não está configurada neste deploy.";
+      return "A URL da API não está configurada neste ambiente.";
     case "INVALID_RESPONSE":
-      return "O servidor devolveu uma resposta inválida. Verifique a URL da API.";
+      return "O servidor devolveu uma resposta inválida. Verifique a configuração da API.";
     default:
       return "Ocorreu um erro inesperado.";
   }

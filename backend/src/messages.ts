@@ -1,0 +1,25 @@
+export const APP_MESSAGES = {
+  auth: {
+    invalidEmail: "Introduza um endereço de e-mail válido.",
+    invalidPassword: "A palavra-passe deve ter pelo menos 8 caracteres.",
+    passwordLowercase: "A palavra-passe deve conter pelo menos uma letra minúscula.",
+    passwordUppercase: "A palavra-passe deve conter pelo menos uma letra maiúscula.",
+    passwordNumber: "A palavra-passe deve conter pelo menos um número.",
+    passwordSymbol: "A palavra-passe deve conter pelo menos um carácter especial.",
+    minName: "O nome deve ter pelo menos 2 caracteres.",
+    maxName: "O nome deve ter no máximo 80 caracteres.",
+  },
+  validation: {
+    integer: "Introduza um valor inteiro.",
+    positive: "Introduza um valor superior a zero.",
+    maxCents: "O valor excede o máximo permitido.",
+    futureDate: "A data final deve estar no futuro.",
+    endAfterStart: "A data de fim deve ser posterior à data de início.",
+    minQuery: "A pesquisa deve ter pelo menos 2 caracteres.",
+    maxQuery: "A pesquisa deve ter no máximo 100 caracteres.",
+    invalidUrl: "O URL fornecido é inválido.",
+    required: "Este campo é obrigatório.",
+    invalidUuid: "O identificador não é válido.",
+    invalidExternalId: "O identificador externo não é válido.",
+  },
+} as const;
