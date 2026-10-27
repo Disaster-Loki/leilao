@@ -1,6 +1,6 @@
 import test, { after, before } from "node:test";
 import assert from "node:assert/strict";
-import { pool } from "../src/db/pool";
+import { pool } from "../../src/db/pool";
 import {
   createLot,
   getTestEnv,

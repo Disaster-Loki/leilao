@@ -3,8 +3,8 @@ import { resolve } from "node:path";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { Client } from "pg";
-import { app } from "../src/app";
-import { pool } from "../src/db/pool";
+import { app } from "../../src/app";
+import { pool } from "../../src/db/pool";
 
 export const PASSWORD = "Leilao@123";
 

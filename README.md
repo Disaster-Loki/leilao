@@ -316,9 +316,10 @@ Após o seed, os URLs do lote e da auditoria são impressos no terminal.
 
 ## Testes automatizados
 
-Todos os testes do backend vivem em `backend/test` e usam o runner nativo
-`node:test`. Não é preciso
-navegador, `curl` ou `jq`.
+Os testes do backend usam o runner nativo `node:test`: os unitários ficam em
+`backend/test/unit` e os de integração em `backend/test/integration`. A base
+de integração fica em `backend/.env.test` e deve ser criada antes da primeira
+execução. Não é preciso navegador, `curl` ou `jq`.
 
 ```bash
 cd backend
