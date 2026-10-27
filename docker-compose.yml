@@ -1,16 +1,14 @@
 services:
-  # ─── PostgreSQL ──────────────────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: leilao
       POSTGRES_USER: leilao
-      POSTGRES_PASSWORD: leilao123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-leilao123}
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      # 5433 no host para não colidir com um PostgreSQL local na 5432.
       - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U leilao -d leilao"]
@@ -18,78 +16,70 @@ services:
       timeout: 5s
       retries: 10
 
-  # ─── Back-end: migra + seed (roda uma vez e sai) ─────────────────────────────
-  # Os segredos abaixo são apenas para desenvolvimento local. Para produção,
-  # use as variáveis do serviço (ver README → Deploy).
-  migrate:
-    image: node:22-alpine
-    working_dir: /app
-    volumes:
-      - ./backend:/app
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: postgres://leilao:leilao123@db:5432/leilao
-      JWT_SECRET: dev-jwt-secret-change-me
-      HMAC_SECRET: dev-hmac-secret-change-me
-      FRONTEND_URL: http://localhost:5173
-      PORT: 3000
-    command: >
-      sh -c "npm ci && npm run reset && npm run migrate && npm run seed"
-    restart: "no"
-
-  # ─── Back-end (API Express) ──────────────────────────────────────────────────
   backend:
     image: node:22-alpine
     working_dir: /app
-    volumes:
-      - ./backend:/app
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
     environment:
-      DATABASE_URL: postgres://leilao:leilao123@db:5432/leilao
-      JWT_SECRET: dev-jwt-secret-change-me
-      HMAC_SECRET: dev-hmac-secret-change-me
-      FRONTEND_URL: http://localhost:5173
-      PORT: 3000
+      DATABASE_URL: postgres://leilao:${POSTGRES_PASSWORD:-leilao123}@db:5432/leilao
+      JWT_SECRET: ${JWT_SECRET:-40de085f26bad942973bf301b4cfd9e3114e30524967af72eb37f429f5b5e930}
+      HMAC_SECRET: ${HMAC_SECRET:-fa691bada3527b3e82ee439dcd70011f83eafe3bb6f3d1a6570b7fe5013b9204}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4173}
+      NODE_ENV: production
+      PORT: "3000"
+    command: >
+      sh -c "npm install --include=dev --no-audit --no-fund
+      && npm run build
+      && npm run migrate
+      && npm run seed
+      && NODE_ENV=production node dist/server.js"
     ports:
       - "3000:3000"
-    command: >
-      sh -c "npm ci && npx tsx src/server.ts"
     healthcheck:
       test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
-        ]
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 20s
-    restart: unless-stopped
+      retries: 30
+      start_period: 90s
 
-  # ─── Front-end (Vite dev server) ─────────────────────────────────────────────
   frontend:
     image: node:22-alpine
     working_dir: /app
-    volumes:
-      - ./frontend:/app
+    restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     environment:
-      API_URL: http://localhost:3000
-    ports:
-      - "5173:5173"
+      API_URL: ${API_URL:-http://localhost:3000}
     command: >
-      sh -c "npm ci && npx vite --host 0.0.0.0"
-    restart: unless-stopped
+      sh -c "npm install --no-audit --no-fund
+      && npm run build
+      && npx --yes serve -s dist -l 4173"
+    ports:
+      - "4173:4173"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:4173/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
 
 volumes:
   pgdata:

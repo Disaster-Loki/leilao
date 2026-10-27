@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
@@ -6,22 +7,45 @@ import { errorMessage } from "../lib/utils";
 import type { Role } from "../types";
 import Icon from "../components/Icon";
 
-// Regras de senha — espelham o Zod do backend
 const PASSWORD_RULES = [
-  { id: "len",     label: "Mínimo 8 caracteres",          test: (p: string) => p.length >= 8 },
-  { id: "upper",   label: "Uma letra maiúscula (A-Z)",     test: (p: string) => /[A-Z]/.test(p) },
-  { id: "lower",   label: "Uma letra minúscula (a-z)",     test: (p: string) => /[a-z]/.test(p) },
-  { id: "number",  label: "Um número (0-9)",               test: (p: string) => /[0-9]/.test(p) },
-  { id: "special", label: "Um carácter especial (!@#$%…)", test: (p: string) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(p) },
+  {
+    id: "len",
+    label: "Mínimo 8 caracteres",
+    test: (p: string) => p.length >= 8,
+  },
+  {
+    id: "upper",
+    label: "Uma letra maiúscula (A-Z)",
+    test: (p: string) => /[A-Z]/.test(p),
+  },
+  {
+    id: "lower",
+    label: "Uma letra minúscula (a-z)",
+    test: (p: string) => /[a-z]/.test(p),
+  },
+  {
+    id: "number",
+    label: "Um número (0-9)",
+    test: (p: string) => /[0-9]/.test(p),
+  },
+  {
+    id: "special",
+    label: "Um carácter especial (!@#$%…)",
+    test: (p: string) =>
+      /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(p),
+  },
 ];
 
 function PasswordStrength({ password }: { password: string }) {
   const passed = PASSWORD_RULES.filter((r) => r.test(password)).length;
   const pct = (passed / PASSWORD_RULES.length) * 100;
+
   const color =
-    passed <= 1 ? "var(--err)" :
-    passed <= 3 ? "var(--warn)" :
-    "var(--ok)";
+    passed <= 1
+      ? "var(--err)"
+      : passed <= 3
+        ? "var(--warn)"
+        : "var(--ok)";
 
   return (
     <div className="pwd-strength">
@@ -31,12 +55,19 @@ function PasswordStrength({ password }: { password: string }) {
           style={{ width: `${pct}%`, background: color }}
         />
       </div>
+
       <ul className="pwd-rules">
         {PASSWORD_RULES.map((r) => {
           const ok = r.test(password);
+
           return (
-            <li key={r.id} className={`pwd-rule ${ok ? "pwd-rule-ok" : ""}`}>
-              <span className="pwd-rule-icon">{ok ? "✓" : "○"}</span>
+            <li
+              key={r.id}
+              className={`pwd-rule ${ok ? "pwd-rule-ok" : ""}`}
+            >
+              <span className="pwd-rule-icon">
+                {ok ? "✓" : "○"}
+              </span>
               {r.label}
             </li>
           );
@@ -49,6 +80,7 @@ function PasswordStrength({ password }: { password: string }) {
 export default function Login() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
+
   const [mode, setMode] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -60,18 +92,22 @@ export default function Login() {
 
   const isRegister = mode === "register";
 
-  // Verifica se todas as regras passam (bloqueia submit no registo)
-  const pwdValid = !isRegister || PASSWORD_RULES.every((r) => r.test(password));
+  const pwdValid =
+    !isRegister || PASSWORD_RULES.every((r) => r.test(password));
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+
     if (isRegister && !pwdValid) return;
+
     setError(null);
     setBusy(true);
+
     try {
       const user = isRegister
         ? await register({ name, email, password, role })
         : await login(email, password);
+
       navigate(user.role === "auctioneer" ? "/panel" : "/");
     } catch (err) {
       setError(errorMessage(err));
@@ -106,45 +142,57 @@ export default function Login() {
           </Link>
 
           <div className="auth-brand-body">
-            <span className="auth-eyebrow">Leilões de arte online</span>
+            <span className="auth-eyebrow">Casa de Leilões</span>
+
             <h1>
-              Onde grandes obras encontram <span className="hero-accent">novos colecionadores.</span>
+              Encontre a sua próxima peça favorita.
             </h1>
+
             <p>
-              Disputas em tempo real com total transparência: saldo reservado de
-              forma segura e cada lance registado numa cadeia de hashes
-              verificável.
+              Veja os lotes disponíveis, acompanhe os leilões
+              e participe quando encontrar algo de que gosta.
             </p>
 
             <ul className="auth-features">
               <li>
-                <span className="auth-feature-icon"><Icon name="bolt" size={17} /></span>
+                <span className="auth-feature-icon">
+                  <Icon name="bolt" size={17} />
+                </span>
                 <div>
-                  <strong>Lances em tempo real</strong>
-                  <span>Prorrogação automática nos últimos minutos.</span>
+                  <strong>Lances ao vivo</strong>
+                  <span>
+                    Acompanhe as ofertas enquanto o leilão decorre.
+                  </span>
                 </div>
               </li>
+
               <li>
-                <span className="auth-feature-icon"><Icon name="lock" size={17} /></span>
+                <span className="auth-feature-icon">
+                  <Icon name="wallet" size={17} />
+                </span>
                 <div>
-                  <strong>Saldo comprometido</strong>
-                  <span>O valor só é reservado enquanto está a ganhar.</span>
-                </div>
-              </li>
-              <li>
-                <span className="auth-feature-icon"><Icon name="receipt" size={17} /></span>
-                <div>
-                  <strong>Histórico auditável</strong>
-                  <span>Comprovante e auditoria de cada arremate.</span>
+                  <strong>A sua carteira</strong>
+                  <span>
+                    Consulte o saldo e os valores reservados.
+                  </span>
                 </div>
               </li>
             </ul>
           </div>
 
           <div className="auth-brand-stats">
-            <div><strong>100%</strong><span>domínio público</span></div>
-            <div><strong>+2 min</strong><span>extensão anti-snipe</span></div>
-            <div><strong>SHA-256</strong><span>cadeia de lances</span></div>
+            <div>
+              <strong>Ao vivo</strong>
+              <span>Lances</span>
+            </div>
+            <div>
+              <strong>+2 min</strong>
+              <span>Tempo extra</span>
+            </div>
+            <div>
+              <strong>Histórico</strong>
+              <span>Dos lances</span>
+            </div>
           </div>
         </aside>
 
@@ -156,11 +204,13 @@ export default function Login() {
           </div>
 
           <div className="auth-form-head">
-            <h2>{isRegister ? "Comece a licitar hoje" : "Entrar na sua conta"}</h2>
+            <h2>
+              {isRegister ? "Criar uma conta" : "Entrar na conta"}
+            </h2>
             <p className="muted">
               {isRegister
-                ? "Leva menos de um minuto. Depois escolha a sua primeira obra."
-                : "Aceda à vitrine, aos seus lances e à carteira."}
+                ? "Preencha os dados para começar."
+                : "Entre para continuar."}
             </p>
           </div>
 
@@ -179,6 +229,7 @@ export default function Login() {
                     autoComplete="name"
                   />
                 </div>
+
                 <div className="field">
                   <label htmlFor="reg-role">Tipo de conta</label>
                   <select
@@ -186,8 +237,12 @@ export default function Login() {
                     value={role}
                     onChange={(e) => setRole(e.target.value as Role)}
                   >
-                    <option value="bidder">Licitante — dou lances</option>
-                    <option value="auctioneer">Leiloeiro — crio lotes</option>
+                    <option value="bidder">
+                      Licitante — dou lances
+                    </option>
+                    <option value="auctioneer">
+                      Leiloeiro — crio lotes
+                    </option>
                   </select>
                 </div>
               </>
@@ -214,11 +269,14 @@ export default function Login() {
                   type={showPwd ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={isRegister ? "Crie uma senha forte" : "••••••••"}
+                  placeholder={isRegister ? "Crie uma senha" : "••••••••"}
                   required
                   minLength={isRegister ? 8 : 1}
-                  autoComplete={isRegister ? "new-password" : "current-password"}
+                  autoComplete={
+                    isRegister ? "new-password" : "current-password"
+                  }
                 />
+
                 <button
                   type="button"
                   className="pwd-toggle"
@@ -226,9 +284,13 @@ export default function Login() {
                   aria-label={showPwd ? "Ocultar senha" : "Mostrar senha"}
                   tabIndex={-1}
                 >
-                  <Icon name={showPwd ? "eyeOff" : "eye"} size={17} />
+                  <Icon
+                    name={showPwd ? "eyeOff" : "eye"}
+                    size={17}
+                  />
                 </button>
               </div>
+
               {isRegister && password.length > 0 && (
                 <PasswordStrength password={password} />
               )}
@@ -243,15 +305,19 @@ export default function Login() {
               {busy
                 ? "Aguarde…"
                 : isRegister
-                ? "Criar conta gratuita"
-                : "Entrar na conta"}
+                  ? "Criar conta"
+                  : "Entrar"}
             </button>
           </form>
 
           <p className="auth-switch muted">
             {isRegister ? "Já tem conta? " : "Não tem conta? "}
-            <button type="button" className="link-btn" onClick={switchMode}>
-              {isRegister ? "Fazer login" : "Criar conta"}
+            <button
+              type="button"
+              className="link-btn"
+              onClick={switchMode}
+            >
+              {isRegister ? "Entrar" : "Criar conta"}
             </button>
           </p>
 
@@ -259,22 +325,39 @@ export default function Login() {
             <p className="auth-demo-label">
               <span>Contas de demonstração</span>
             </p>
+
             <div className="demo-chips">
-              <button type="button" className="chip"
-                onClick={() => fillDemo("leiloeiro@leilao.com", "Leilao@123")}>
+              <button
+                type="button"
+                className="chip"
+                onClick={() =>
+                  fillDemo("leiloeiro@leilao.com", "Leilao@123")
+                }
+              >
                 Leiloeiro
               </button>
-              <button type="button" className="chip"
-                onClick={() => fillDemo("ana@leilao.com", "Leilao@123")}>
+
+              <button
+                type="button"
+                className="chip"
+                onClick={() => fillDemo("ana@leilao.com", "Leilao@123")}
+              >
                 Ana
               </button>
-              <button type="button" className="chip"
-                onClick={() => fillDemo("bruno@leilao.com", "Leilao@123")}>
+
+              <button
+                type="button"
+                className="chip"
+                onClick={() =>
+                  fillDemo("bruno@leilao.com", "Leilao@123")
+                }
+              >
                 Bruno
               </button>
             </div>
+
             <Link to="/" className="auth-guest-link">
-              Ver vitrine sem entrar →
+              Ver os lotes sem entrar →
             </Link>
           </div>
         </section>

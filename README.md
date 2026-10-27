@@ -363,7 +363,7 @@ simultâneo não cause um falso alarme.
 - Recuperação de senha não foi implementada (fora do escopo do enunciado).
 - A imagem do lote depende do CDN do Wikimedia Commons. Se a obra não existir
   lá, o cartão mostra o placeholder "Imagem indisponível".
-- O front usa polling (a cada 2–5 s) em vez de WebSocket. Num produto real
+- O front usa polling (a cada 1–2 s) em vez de WebSocket. Num produto real
   usaria SSE ou WebSocket; polling foi suficiente para os requisitos do teste.
 
 ## Uso de inteligência artificial
@@ -386,18 +386,18 @@ locks, consistência financeira, segurança, testes) antes de qualquer auxílio 
 
 ### Fase 2 — Front-end (com assistência de IA)
 
-Após o back-end estar completo e testado, a **Antigravity (Claude / GPT)** foi
+Após o back-end estar completo e testado, a **Claude Sonnet 4.6 e OpenCode Big Pickle** foi
 usada para acelerar a construção da interface React, por ser um trabalho
 predominantemente de scaffolding e composição de componentes com padrões já
 estabelecidos. A IA:
 
 - Gerou os componentes React com base na estrutura de tipos do back-end já existente
-- Criou o design system (CSS custom properties, dark mode, responsividade)
+- Criou o design system (CSS properties, dark mode, responsividade)
 - Compôs as páginas (vitrine, sala de lances, carteira, painel, auditoria, comprovante)
 - Corrigiu erros de TypeScript e de build apontados durante o desenvolvimento
 
 Toda a lógica crítica (hooks de polling, countdown sincronizado com o servidor,
-deteção de prorrogação anti-sniping) foi revisada e ajustada pelo desenvolvedor.
+deteção de prorrogação anti-sniping) foi revisada e ajustada pelo me.
 
 ### Fase 3 — Revisão, testes e endurecimento (com IA)
 

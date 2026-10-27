@@ -21,7 +21,7 @@ export default function ThemeToggle({ compact = false }: Props) {
         <span className={theme === "light" ? "on" : ""}><Icon name="sun" size={15} /></span>
         <span className={theme === "dark" ? "on" : ""}><Icon name="moon" size={15} /></span>
       </span>
-      {!compact && <span className="theme-toggle-text"></span>}
+      {/*!compact && <span className="theme-toggle-text"></span>*/}
     </button>
   );
 }

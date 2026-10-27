@@ -357,6 +357,109 @@ input:focus, select:focus { outline: none; border-color: var(--primary); }
 .deposit-form { padding: 1.25rem; margin-bottom: 1rem; }
 .quick-amounts { display: flex; gap: .5rem; flex-wrap: wrap; }
 
+
+/* Página da carteira */
+.wallet-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.wallet-page > h1 {
+  margin: 0;
+}
+
+/* Secção independente dos três cards */
+.wallet-stats-section {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* Cards do saldo */
+.wallet-page .wallet-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  align-items: stretch;
+}
+
+/* Cada card ocupa a sua coluna sem forçar a largura */
+.wallet-page .wallet-stats > .stat-card {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+
+/* Evita que valores monetários provoquem overflow */
+.wallet-page .stat-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* O formulário fica separado dos cards */
+.wallet-page > .deposit-form,
+.wallet-page > .wallet-receive-info {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* Tablets: dois cards por linha quando o espaço é limitado */
+@media (max-width: 800px) {
+  .wallet-page .wallet-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Telemóveis: um card por linha */
+@media (max-width: 520px) {
+  .wallet-page {
+    gap: 1.25rem;
+  }
+
+  .wallet-page .wallet-stats {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+}
+
+/* Bidder: três cards na mesma linha em ecrãs grandes */
+.wallet-page .wallet-stats-bidder .wallet-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Outros perfis: apenas Saldo Total e Disponível */
+.wallet-page .wallet-stats-other .wallet-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Tablets */
+@media (max-width: 800px) {
+  .wallet-page .wallet-stats-bidder .wallet-stats,
+  .wallet-page .wallet-stats-other .wallet-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Telemóveis */
+@media (max-width: 520px) {
+  .wallet-page .wallet-stats-bidder .wallet-stats,
+  .wallet-page .wallet-stats-other .wallet-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ─── Auctioneer panel ─── */
 .panel-summary {
   display: flex; gap: 2rem; padding: 1rem 1.25rem;
@@ -761,10 +864,20 @@ input:focus, select:focus { outline: none; border-color: var(--primary); }
 [data-theme="light"] .lot-card:hover { box-shadow: 0 14px 40px rgba(30,41,90,.14); }
 
 /* ─── Login / Registo ─── */
-.auth-page {
+/* .auth-page {
   flex: 1; display: flex; align-items: center; justify-content: center;
   padding: 2rem 1rem;
+} */
+
+.auth-page {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem 1rem;
+  min-height: 0;
 }
+
 .auth-shell {
   width: 100%; max-width: 1080px; display: grid;
   grid-template-columns: 1.05fr .95fr;
@@ -808,7 +921,16 @@ input:focus, select:focus { outline: none; border-color: var(--primary); }
 .auth-brand-stats div { display: flex; flex-direction: column; gap: .05rem; }
 .auth-brand-stats strong { font-size: .95rem; letter-spacing: -.02em; }
 .auth-brand-stats span { font-size: .67rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-.auth-form-panel { padding: 2.5rem; display: flex; flex-direction: column; min-width: 0; }
+/* .auth-form-panel { padding: 2.5rem; display: flex; flex-direction: column; min-width: 0; } */
+
+.auth-form-panel {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
 .auth-form-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.6rem; }
 .auth-form-kicker {
   font-size: .68rem; font-weight: 700; letter-spacing: .11em;
@@ -1108,4 +1230,22 @@ body::-webkit-scrollbar {
   .win-card { animation: none; }
   .confetti { display: none; }
   .win-trophy { animation: none; }
+}
+
+/* Ajustes para o formulário de login e registo */
+@media (max-width: 700px) {
+  .auth-page {
+    align-items: flex-start;
+    padding-top: 1rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .auth-shell {
+    height: auto;
+    min-height: 0;
+  }
+
+  .auth-form-panel {
+    min-height: 0;
+  }
 }
