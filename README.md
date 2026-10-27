@@ -273,7 +273,8 @@ npm run test:all          # ambos
 
 Os testes unitários não precisam de base de dados. Os de integração leem
 `backend/.env.test`, **apagam e recriam o schema `public`** da base indicada e
-recusam correr se o nome da base não contiver `test`. Crie a base uma vez:
+recusam correr se o nome da base não contiver `test`. Os ficheiros correm em
+série (`--test-concurrency=1`) porque partilham esse schema. Crie a base uma vez:
 
 ```bash
 sudo -u postgres psql -c "CREATE DATABASE leilao_test OWNER leilao;"

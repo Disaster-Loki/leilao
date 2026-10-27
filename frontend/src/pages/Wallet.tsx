@@ -65,6 +65,7 @@ export default function Wallet() {
         </div>
       ) : null}
 
+      {/*
       <div className="wallet-explain card">
         <h2>Como funciona</h2>
         <ul>
@@ -83,6 +84,7 @@ export default function Wallet() {
           </li>
         </ul>
       </div>
+      */}
 
       {user?.role === "bidder" ? (
         <div className="deposit-form card">

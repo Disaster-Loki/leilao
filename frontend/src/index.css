@@ -184,7 +184,8 @@ h3 { font-size: 1.05rem; }
   cursor: pointer; font-family: inherit; transition: background .15s, border-color .15s;
   text-decoration: none; white-space: nowrap;
 }
-.btn:hover { background: var(--border); }
+.btn:hover { background: var(--border); text-decoration: none; }
+a.btn, a.btn:hover, a.btn:focus, a.btn:active { text-decoration: none; }
 .btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
 .btn-primary:hover { background: var(--primary-h); border-color: var(--primary-h); }
 .btn-ghost { background: transparent; border-color: transparent; color: var(--muted); }
@@ -382,7 +383,6 @@ input:focus, select:focus { outline: none; border-color: var(--primary); }
 /* ─── My bids ─── */
 .mybids-list { display: flex; flex-direction: column; gap: 1rem; }
 .mybid-card { display: grid; grid-template-columns: 90px 1fr auto; gap: 1rem; padding: 1rem; align-items: start; }
-@media (max-width: 600px) { .mybid-card { grid-template-columns: 1fr; } }
 .mybid-img { width: 90px; height: 70px; object-fit: cover; border-radius: 8px; }
 .mybid-title { font-weight: 600; font-size: .95rem; }
 .mybid-meta { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .4rem; font-size: .82rem; }
@@ -392,6 +392,38 @@ input:focus, select:focus { outline: none; border-color: var(--primary); }
 .result-lost { background: var(--err-bg); color: var(--err); }
 .result-leading { background: rgba(34,197,94,.15); color: var(--ok); }
 .result-outbid { background: var(--err-bg); color: var(--err); }
+
+@media (max-width: 600px) {
+  .mybid-card {
+    position: relative; display: flex; flex-direction: column;
+    justify-content: flex-end; min-height: 280px; padding: 0;
+  }
+  .mybid-card::after {
+    content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(180deg, rgba(6,8,15,.04) 18%, rgba(6,8,15,.55) 55%, rgba(6,8,15,.94) 100%);
+  }
+  .mybid-img {
+    position: absolute; inset: 0; z-index: 0;
+    width: 100%; height: 100%; border-radius: 0;
+  }
+  .mybid-info { position: relative; z-index: 2; padding: 4.5rem 1rem .55rem; }
+  .mybid-title { color: #fff; font-size: 1.05rem; }
+  .mybid-info .muted, .mybid-meta .muted { color: rgba(255,255,255,.74); }
+  .mybid-meta { gap: .4rem .6rem; }
+  .mybid-meta strong { color: #fff; }
+  .mybid-actions {
+    position: relative; z-index: 2; flex-direction: row; flex-wrap: wrap;
+    gap: .45rem; padding: 0 1rem 1rem;
+  }
+  .mybid-actions .btn {
+    flex: 1 1 auto; color: #fff; background: rgba(255,255,255,.14);
+    border-color: rgba(255,255,255,.24); backdrop-filter: blur(6px);
+  }
+  .mybid-actions .btn:hover { background: rgba(255,255,255,.24); color: #fff; }
+  .mybid-actions .btn-primary { background: var(--primary); border-color: var(--primary); }
+  .mybid-actions .btn-primary:hover { background: var(--primary-h); border-color: var(--primary-h); }
+  .mybid-card .result-badge { backdrop-filter: blur(6px); }
+}
 
 /* ─── Receipt ─── */
 .receipt-page { padding: 2rem 1rem; }
@@ -790,7 +822,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary); }
   border: none; background: none; padding: 0; color: var(--primary-h);
   font-family: inherit; font-size: inherit; font-weight: 600; cursor: pointer;
 }
-.link-btn:hover { text-decoration: underline; }
+.link-btn:hover { color: var(--primary); text-decoration: none; }
 .auth-demo { margin-top: 1.6rem; padding-top: 1.4rem; border-top: 1px solid var(--border); text-align: center; }
 .auth-demo-label { display: flex; align-items: center; gap: .7rem; color: var(--muted); font-size: .74rem; }
 .auth-demo-label::before, .auth-demo-label::after {
@@ -901,8 +933,14 @@ input:focus, select:focus { outline: none; border-color: var(--primary); }
   .container, .container-wide { padding-left: .9rem; padding-right: .9rem; }
   .showcase-hero { padding: 2.75rem 1rem 2.25rem; border-radius: 18px; }
   .hero-stats { gap: 1.5rem; }
-  .search-bar { flex-wrap: wrap; }
-  .search-bar input { flex: 1 1 100%; }
+  .search-bar { flex-wrap: nowrap; gap: .4rem; }
+  .search-bar input {
+    flex: 1 1 auto; min-width: 0; height: 46px;
+    padding-left: 2.4rem; padding-right: .7rem;
+  }
+  .search-bar .btn {
+    flex: 0 0 auto; height: 46px; padding-left: .85rem; padding-right: .85rem;
+  }
   .search-clear { display: none; }
   .filter-bar { align-items: stretch; }
   .filter-pills { width: 100%; }
@@ -955,6 +993,28 @@ body::-webkit-scrollbar {
     border-left: none;
     border-right: none;
   }
+}
+
+/* ─── Ajustes móveis: sala do lote e auditoria ─── */
+@media (max-width: 600px) {
+  .room-layout { gap: 1rem; }
+  .room-info, .room-panel { min-width: 0; }
+  .room-img { max-height: 300px; border-radius: 14px; }
+  .room-meta { padding: .9rem; }
+  .room-title { font-size: 1.2rem; }
+  .bid-panel { padding: 1rem; }
+  .bid-panel-header { flex-wrap: wrap; gap: .5rem 1rem; }
+  .bid-amount { font-size: 1.85rem; }
+  .countdown-box { text-align: left; }
+  .countdown-box .countdown { font-size: 1.35rem; }
+  .bid-form .btn-sm { width: 100%; }
+  .bids-history { overflow-x: auto; }
+  .bids-history .bids-table { min-width: 340px; }
+  .audit-header h1 { font-size: 1.65rem; }
+  .audit-header .btn { width: 100%; margin-top: .5rem; }
+  .audit-summary, .audit-issues, .audit-footer { padding: 1rem; }
+  .verdict-banner { padding: 1rem; gap: .75rem; }
+  .audit-page .bids-table { min-width: 620px; }
 }
 
 /* ─── Celebração de vitória no leilão ─── */
