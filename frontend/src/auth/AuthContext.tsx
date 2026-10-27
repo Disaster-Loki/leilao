@@ -62,8 +62,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const updateProfile = useCallback(async (data: {
+    name?: string;
+    email?: string;
+    newPassword?: string;
+    currentPassword: string;
+  }) => {
+    const result = await api<{ user: User; token: string }>("/auth/me", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+    localStorage.setItem("token", result.token);
+    setUser(result.user);
+    return result.user;
+  }, []);
+
+  const deleteAccount = useCallback(async (currentPassword: string) => {
+    await api<void>("/auth/me", {
+      method: "DELETE",
+      body: JSON.stringify({ currentPassword }),
+    });
+    localStorage.removeItem("token");
+    setUser(null);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, updateProfile, deleteAccount, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -144,3 +144,51 @@ test("saldo acima do teto configurado é rejeitado sem erro 500", async () => {
   assert.equal(response.body.error, "WALLET_ABOVE_MAXIMUM");
   assert.match(response.body.message, /saldo máximo/);
 });
+
+test("perfil pode ser atualizado com confirmação da senha atual", async () => {
+  const { ana } = getTestEnv();
+  const wrongPassword = await request("/auth/me", {
+    method: "PATCH",
+    token: ana.token,
+    body: { currentPassword: "senha-errada", name: "Ana Nova" },
+  });
+  assert.equal(wrongPassword.status, 400);
+  assert.equal(wrongPassword.body.error, "INVALID_CURRENT_PASSWORD");
+
+  const updated = await request("/auth/me", {
+    method: "PATCH",
+    token: ana.token,
+    body: { currentPassword: PASSWORD, name: "Ana Atualizada", email: "ana-nova@teste.com" },
+  });
+  assert.equal(updated.status, 200);
+  assert.equal(updated.body.user.name, "Ana Atualizada");
+  assert.equal(updated.body.user.email, "ana-nova@teste.com");
+  const me = await request("/auth/me", { token: updated.body.token });
+  assert.equal(me.body.email, "ana-nova@teste.com");
+});
+
+test("conta com histórico financeiro não pode ser eliminada", async () => {
+  const { ana } = getTestEnv();
+  const response = await request("/auth/me", {
+    method: "DELETE",
+    token: ana.token,
+    body: { currentPassword: PASSWORD },
+  });
+  assert.equal(response.status, 409);
+  assert.equal(response.body.error, "ACCOUNT_HAS_HISTORY");
+});
+
+test("conta vazia pode ser eliminada com confirmação da senha", async () => {
+  const account = await request("/auth/register", {
+    method: "POST",
+    body: { email: "empty-account@teste.com", name: "Conta Vazia", password: PASSWORD, role: "bidder" },
+  });
+  const deleted = await request("/auth/me", {
+    method: "DELETE",
+    token: account.body.token,
+    body: { currentPassword: PASSWORD },
+  });
+  assert.equal(deleted.status, 204);
+  const me = await request("/auth/me", { token: account.body.token });
+  assert.equal(me.status, 404);
+});

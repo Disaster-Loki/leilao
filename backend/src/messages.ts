@@ -9,6 +9,7 @@ export const APP_MESSAGES = {
     minName: "O nome deve ter pelo menos 2 caracteres.",
     maxName: "O nome deve ter no máximo 80 caracteres.",
     maxPassword: "A senha não pode exceder 100 caracteres.",
+    currentPasswordRequired: "Informe a senha atual para confirmar a alteração.",
   },
   validation: {
     integer: "Informe um valor inteiro.",
@@ -55,5 +56,10 @@ export const APP_MESSAGES = {
     DEPOSIT_BELOW_MINIMUM: "O depósito está abaixo do valor mínimo permitido.",
     DEPOSIT_ABOVE_MAXIMUM: "O depósito excede o valor máximo permitido.",
     WALLET_ABOVE_MAXIMUM: "Este depósito excederia o saldo máximo permitido na carteira.",
+    INVALID_CURRENT_PASSWORD: "A senha atual está incorreta.",
+    ACCOUNT_HAS_HISTORY: "A conta tem atividade financeira ou lotes e não pode ser eliminada. Contacte o suporte.",
+    LOT_NOT_EDITABLE: "Este lote já começou, tem lances ou foi encerrado e não pode ser editado.",
+    LOT_NOT_REMOVABLE: "Só é possível eliminar lotes sem lances e ainda não liquidados.",
+    LOT_DATES_INVALID: "O fim do lote deve ser posterior ao início e ainda estar no futuro.",
   },
 } as const;

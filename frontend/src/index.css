@@ -191,6 +191,7 @@ a.btn, a.btn:hover, a.btn:focus, a.btn:active { text-decoration: none; }
 .btn-ghost { background: transparent; border-color: transparent; color: var(--muted); }
 .btn-ghost:hover { background: var(--card2); color: var(--text); }
 .btn-danger { background: var(--err-bg); border-color: var(--err); color: var(--err); }
+.row-actions { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
 .btn-sm { padding: .35rem .75rem; font-size: .8rem; }
 .btn-block { width: 100%; }
 .btn:disabled { opacity: .5; cursor: wait; }

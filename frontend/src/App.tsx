@@ -9,6 +9,7 @@ import AuctioneerPanel from "./pages/AuctioneerPanel";
 import MyBids from "./pages/MyBids";
 import ReceiptPage from "./pages/ReceiptPage";
 import AuditPage from "./pages/AuditPage";
+import AccountPage from "./pages/AccountPage";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         {/* Públicas */}
         <Route path="/" element={<Showcase />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/account" element={<Guard><AccountPage /></Guard>} />
         <Route path="/lots/:id" element={<LotRoom />} />
         <Route path="/receipts/:id" element={<ReceiptPage />} />
         <Route path="/audit/:lotId" element={<AuditPage />} />

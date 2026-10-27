@@ -21,7 +21,8 @@ export type IconName =
   | "alert"
   | "shield"
   | "dot"
-  | "grid";
+  | "grid"
+  | "user";
 
 const PATHS: Record<IconName, ReactNode> = {
   gallery: (
@@ -137,6 +138,12 @@ const PATHS: Record<IconName, ReactNode> = {
       <rect x="14" y="3" width="7" height="7" rx="1" />
       <rect x="14" y="14" width="7" height="7" rx="1" />
       <rect x="3" y="14" width="7" height="7" rx="1" />
+    </>
+  ),
+  user: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M5 21a7 7 0 0 1 14 0" />
     </>
   ),
 };

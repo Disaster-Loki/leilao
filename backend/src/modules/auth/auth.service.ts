@@ -66,3 +66,79 @@ export async function getMe(id: string) {
   if (!rows[0]) throw new AppError(404, "USER_NOT_FOUND");
   return rows[0];
 }
+
+export async function updateMe(
+  id: string,
+  input: { currentPassword: string; name?: string; email?: string; newPassword?: string }
+) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query(
+      "SELECT email, name, password_hash, role FROM users WHERE id = $1 FOR UPDATE",
+      [id]
+    );
+    const account = rows[0];
+    if (!account) throw new AppError(404, "USER_NOT_FOUND");
+    if (!(await bcrypt.compare(input.currentPassword, account.password_hash))) {
+      throw new AppError(400, "INVALID_CURRENT_PASSWORD");
+    }
+
+    const email = input.email?.toLowerCase() ?? account.email;
+    const name = input.name ?? account.name;
+    const passwordHash = input.newPassword
+      ? await bcrypt.hash(input.newPassword, 10)
+      : account.password_hash;
+    const { rows: updated } = await client.query(
+      `UPDATE users SET email = $1, name = $2, password_hash = $3
+       WHERE id = $4 RETURNING id, email, name, role`,
+      [email, name, passwordHash, id]
+    );
+    await client.query("COMMIT");
+    return { user: updated[0], token: signToken(id, account.role) };
+  } catch (err: any) {
+    await client.query("ROLLBACK");
+    if (err.code === "23505") throw new AppError(409, "EMAIL_ALREADY_EXISTS");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteMe(id: string, currentPassword: string): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query(
+      `SELECT u.password_hash, w.total_cents, w.committed_cents
+       FROM users u JOIN wallets w ON w.user_id = u.id
+       WHERE u.id = $1 FOR UPDATE OF u, w`,
+      [id]
+    );
+    const account = rows[0];
+    if (!account) throw new AppError(404, "USER_NOT_FOUND");
+    if (!(await bcrypt.compare(currentPassword, account.password_hash))) {
+      throw new AppError(400, "INVALID_CURRENT_PASSWORD");
+    }
+
+    const { rows: history } = await client.query(
+      `SELECT EXISTS (SELECT 1 FROM lots WHERE auctioneer_id = $1)
+          OR EXISTS (SELECT 1 FROM bids WHERE bidder_id = $1)
+          OR EXISTS (SELECT 1 FROM wallet_transactions WHERE user_id = $1)
+          OR EXISTS (SELECT 1 FROM receipts WHERE winner_id = $1) AS has_history`,
+      [id]
+    );
+    if (history[0].has_history || BigInt(account.total_cents) !== 0n || BigInt(account.committed_cents) !== 0n) {
+      throw new AppError(409, "ACCOUNT_HAS_HISTORY");
+    }
+
+    await client.query("DELETE FROM wallets WHERE user_id = $1", [id]);
+    await client.query("DELETE FROM users WHERE id = $1", [id]);
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}

@@ -138,6 +138,19 @@ npm install
 npm run dev               # abre em http://localhost:5173
 ```
 
+### Resolução de problemas locais
+
+- **Porta 3000 já em uso:** não inicie outra cópia da API enquanto o serviço do
+  Docker Compose estiver ativo. Escolha um único modo: pare os serviços com
+  `docker compose down` (os dados do volume são preservados) para usar a execução
+  local, ou mantenha o Compose. Também pode iniciar a API noutra porta, por
+  exemplo `PORT=3001 npm run start`; nesse caso, ajuste `API_URL` do front-end para
+  `http://localhost:3001` e reinicie/reconstrua o front.
+- **Permissão negada durante o build Vite:** execute `npm install` e os builds
+  como o utilizador normal, nunca com `sudo`. O script de build usa o carregador
+  `runner` do Vite para evitar ficheiros temporários de configuração em
+  `node_modules/.vite-temp`.
+
 ## Build de produção
 
 ### Back-end
@@ -224,6 +237,14 @@ As permissões são verificadas **no servidor** em cada rota (middleware
 - **Cancelamento:** só o dono do lote e só antes de liquidado. Usa o mesmo
   bloqueio de linha (`FOR UPDATE`) dos lances. Se já houver líder, o valor
   comprometido é libertado (volta ao disponível) na mesma transação.
+- **Gestão da conta e dos lotes:** utilizadores podem atualizar nome, e-mail e
+  senha em `/account`, confirmando a senha atual. Só se elimina uma conta sem
+  lotes, lances, saldo ou movimentos financeiros. Leiloeiros podem editar os
+  dados e a obra de um lote agendado enquanto não tiver começado nem recebido
+  lances; podem eliminar lotes agendados sem lances (ou cancelados sem lances).
+  Lotes com lances não são apagados/editados, para preservar comprovantes,
+  saldos e a cadeia de auditoria; continuam disponíveis as operações de
+  cancelamento previstas.
 - **Republicação de obras:** o enunciado não impede voltar a leiloar uma obra
   já arrematada, por isso não existe regra extra de bloqueio. A busca e a criação
   continuam a liquidar primeiro os lotes vencidos, para o estado da vitrine estar

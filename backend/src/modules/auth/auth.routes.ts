@@ -26,6 +26,25 @@ const loginSchema = z.object({
   password: z.string().min(1, APP_MESSAGES.validation.required),
 });
 
+const profileSchema = z.object({
+  currentPassword: z.string().min(1, APP_MESSAGES.validation.required),
+  name: z.string().trim().min(2, APP_MESSAGES.auth.minName).max(80, APP_MESSAGES.auth.maxName).optional(),
+  email: z.string().trim().toLowerCase().email(APP_MESSAGES.auth.invalidEmail).optional(),
+  newPassword: z.string().min(8, APP_MESSAGES.auth.invalidPassword)
+    .max(100, APP_MESSAGES.auth.maxPassword)
+    .regex(/[a-z]/, APP_MESSAGES.auth.passwordLowercase)
+    .regex(/[A-Z]/, APP_MESSAGES.auth.passwordUppercase)
+    .regex(/[0-9]/, APP_MESSAGES.auth.passwordNumber)
+    .regex(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/, APP_MESSAGES.auth.passwordSymbol)
+    .optional(),
+}).refine(({ name, email, newPassword }) => Boolean(name || email || newPassword), {
+  message: APP_MESSAGES.validation.invalidValue,
+});
+
+const deleteAccountSchema = z.object({
+  currentPassword: z.string().min(1, APP_MESSAGES.validation.required),
+});
+
 authRouter.post(
   "/register",
   asyncHandler(async (req, res) => {
@@ -47,5 +66,24 @@ authRouter.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     res.json(await service.getMe(req.user!.id));
+  })
+);
+
+authRouter.patch(
+  "/me",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const input = profileSchema.parse(req.body);
+    res.json(await service.updateMe(req.user!.id, input));
+  })
+);
+
+authRouter.delete(
+  "/me",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { currentPassword } = deleteAccountSchema.parse(req.body);
+    await service.deleteMe(req.user!.id, currentPassword);
+    res.status(204).end();
   })
 );

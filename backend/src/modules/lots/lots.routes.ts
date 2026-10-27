@@ -23,6 +23,20 @@ const createSchema = z
   .refine((v: { endAt: Date; startAt: Date }) => v.endAt > v.startAt, { message: APP_MESSAGES.validation.endAfterStart, path: ["endAt"] })
   .refine((v: { endAt: Date }) => v.endAt > new Date(), { message: APP_MESSAGES.validation.futureDate, path: ["endAt"] });
 
+const updateSchema = z.object({
+  externalId: z.string().regex(/^\d+$/, APP_MESSAGES.validation.invalidExternalId).optional(),
+  startPriceCents: z.string().regex(CENTS_PATTERN, APP_MESSAGES.validation.centsString)
+    .transform((value) => BigInt(value)).refine((value) => value > 0n, APP_MESSAGES.validation.positive)
+    .refine((value) => value <= POSTGRES_BIGINT_MAX, APP_MESSAGES.validation.maxCents).optional(),
+  minIncrementCents: z.string().regex(CENTS_PATTERN, APP_MESSAGES.validation.centsString)
+    .transform((value) => BigInt(value)).refine((value) => value > 0n, APP_MESSAGES.validation.positive)
+    .refine((value) => value <= POSTGRES_BIGINT_MAX, APP_MESSAGES.validation.maxCents).optional(),
+  startAt: z.coerce.date(APP_MESSAGES.validation.invalidDateType).optional(),
+  endAt: z.coerce.date(APP_MESSAGES.validation.invalidDateType).optional(),
+}).refine((input) => Object.values(input).some((value) => value !== undefined), {
+  message: APP_MESSAGES.validation.invalidValue,
+});
+
 // Públicas (vitrine e sala)
 lotsRouter.get(
   "/",
@@ -59,6 +73,28 @@ lotsRouter.post(
   asyncHandler(async (req, res) => {
     const input = createSchema.parse(req.body);
     res.status(201).json(await service.createLot(req.user!.id, input));
+  })
+);
+
+lotsRouter.patch(
+  "/:id",
+  requireAuth,
+  requireRole("auctioneer"),
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid(APP_MESSAGES.validation.invalidUuid).parse(req.params.id);
+    const input = updateSchema.parse(req.body);
+    res.json(await service.updateLot(id, req.user!.id, input));
+  })
+);
+
+lotsRouter.delete(
+  "/:id",
+  requireAuth,
+  requireRole("auctioneer"),
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid(APP_MESSAGES.validation.invalidUuid).parse(req.params.id);
+    await service.deleteLot(id, req.user!.id);
+    res.status(204).end();
   })
 );
 

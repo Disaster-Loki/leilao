@@ -6,6 +6,8 @@ export interface AuthValue {
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
   register: (data: { name: string; email: string; password: string; role: Role }) => Promise<User>;
+  updateProfile: (data: { name?: string; email?: string; newPassword?: string; currentPassword: string }) => Promise<User>;
+  deleteAccount: (currentPassword: string) => Promise<void>;
   logout: () => void;
 }
 

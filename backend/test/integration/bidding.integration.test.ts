@@ -200,6 +200,77 @@ test("mesma obra pode ser publicada novamente (sem regra extra no enunciado)", a
   assert.equal(lot.title, ARTWORK.title);
 });
 
+test("leiloeiro edita os dados de um lote agendado sem lances", async () => {
+  const { auctioneer, ana } = getTestEnv();
+  const lot = await createLot({
+    startAt: new Date(Date.now() + 60 * 60_000).toISOString(),
+    endAt: new Date(Date.now() + 2 * 60 * 60_000).toISOString(),
+  });
+  const forbidden = await request(`/lots/${lot.id}`, {
+    method: "PATCH",
+    token: ana.token,
+    body: { startPriceCents: "60000" },
+  });
+  assert.equal(forbidden.status, 403);
+
+  const updated = await request(`/lots/${lot.id}`, {
+    method: "PATCH",
+    token: auctioneer.token,
+    body: {
+      externalId: "12346",
+      startPriceCents: "75000",
+      minIncrementCents: "10000",
+      startAt: new Date(Date.now() + 90 * 60_000).toISOString(),
+      endAt: new Date(Date.now() + 3 * 60 * 60_000).toISOString(),
+    },
+  });
+  assert.equal(updated.status, 200);
+  assert.equal(updated.body.title, ARTWORK.title);
+  assert.equal(updated.body.startPriceCents, "75000");
+  assert.equal(updated.body.minIncrementCents, "10000");
+  assert.equal(updated.body.status, "scheduled");
+});
+
+test("lote agendado sem lances pode ser eliminado pelo dono", async () => {
+  const { auctioneer, ana } = getTestEnv();
+  const lot = await createLot({
+    startAt: new Date(Date.now() + 60 * 60_000).toISOString(),
+    endAt: new Date(Date.now() + 2 * 60 * 60_000).toISOString(),
+  });
+  const forbidden = await request(`/lots/${lot.id}`, { method: "DELETE", token: ana.token });
+  assert.equal(forbidden.status, 403);
+
+  const removed = await request(`/lots/${lot.id}`, { method: "DELETE", token: auctioneer.token });
+  assert.equal(removed.status, 204);
+  const missing = await request(`/lots/${lot.id}`);
+  assert.equal(missing.status, 404);
+});
+
+test("lotes com lances não podem ser editados nem eliminados", async () => {
+  const { ana, auctioneer } = getTestEnv();
+  const lot = await createLot();
+  const bid = await request(`/lots/${lot.id}/bids`, {
+    method: "POST",
+    token: ana.token,
+    body: { amountCents: "50000" },
+  });
+  assert.equal(bid.status, 201);
+
+  const edit = await request(`/lots/${lot.id}`, {
+    method: "PATCH",
+    token: auctioneer.token,
+    body: { startPriceCents: "60000" },
+  });
+  assert.equal(edit.status, 409);
+  assert.equal(edit.body.error, "LOT_NOT_EDITABLE");
+
+  const remove = await request(`/lots/${lot.id}`, { method: "DELETE", token: auctioneer.token });
+  assert.equal(remove.status, 409);
+  assert.equal(remove.body.error, "LOT_NOT_REMOVABLE");
+  const audit = await request(`/audit/${lot.id}`);
+  assert.equal(audit.body.valid, true);
+});
+
 test("lances antigos com a representação histórica continuam íntegros", async () => {
   const lot = await createLot();
   const { ana, bruno } = getTestEnv();

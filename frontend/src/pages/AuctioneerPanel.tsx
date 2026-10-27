@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { errorMessage, formatDateTime, fromDatetimeLocalInput, getBrowserTimeZoneLabel, toDatetimeLocalInput } from "../lib/utils";
-import { centsToApi, formatCents, parseReaisToCents } from "../lib/money";
+import { centsToApi, formatCents, formatReaisInput, parseReaisToCents } from "../lib/money";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
 import Icon from "../components/Icon";
 import type { ArtworkResult, Lot } from "../types";
@@ -20,6 +20,7 @@ export default function AuctioneerPanel() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<ArtworkResult | null>(null);
+  const [editingLot, setEditingLot] = useState<Lot | null>(null);
   const [lotError, setLotError] = useState<string | null>(null);
   const [lotMsg, setLotMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -84,9 +85,21 @@ export default function AuctioneerPanel() {
     }, 60);
   }
 
+  function beginEdit(lot: Lot) {
+    setEditingLot(lot);
+    setSelected(null);
+    setStartPrice(formatReaisInput(BigInt(lot.startPriceCents)));
+    setMinIncrement(formatReaisInput(BigInt(lot.minIncrementCents)));
+    setStartAt(toDatetimeLocalInput(new Date(lot.startAt)));
+    setEndAt(toDatetimeLocalInput(new Date(lot.endAt)));
+    setLotError(null);
+    setLotMsg(null);
+    createPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   async function createLot(e: FormEvent) {
     e.preventDefault();
-    if (!selected) return;
+    if (!selected && !editingLot) return;
     setLotError(null);
     setLotMsg(null);
     let startPriceCents: bigint;
@@ -103,24 +116,37 @@ export default function AuctioneerPanel() {
     }
     setBusy(true);
     try {
-      await api("/lots", {
-        method: "POST",
+      await api(editingLot ? `/lots/${editingLot.id}` : "/lots", {
+        method: editingLot ? "PATCH" : "POST",
         body: JSON.stringify({
-          externalId: selected.externalId,
+          ...(selected ? { externalId: selected.externalId } : {}),
           startPriceCents: centsToApi(startPriceCents),
           minIncrementCents: centsToApi(minIncrementCents),
           startAt: fromDatetimeLocalInput(startAt).toISOString(),
           endAt: fromDatetimeLocalInput(endAt).toISOString(),
         }),
       });
-      setLotMsg(`Lote "${selected.title}" criado com sucesso!`);
+      setLotMsg(editingLot ? "Lote atualizado com sucesso." : `Lote "${selected!.title}" criado com sucesso!`);
       setSelected(null);
+      setEditingLot(null);
       setResults(null);
       setRefreshKey((k) => k + 1);
     } catch (err) {
       setLotError(errorMessage(err));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function deleteLot(lot: Lot) {
+    if (!confirm(`Eliminar o lote "${lot.title}"? Esta ação não pode ser desfeita.`)) return;
+    setCancelMsg(null);
+    try {
+      await api(`/lots/${lot.id}`, { method: "DELETE" });
+      setCancelMsg(`Lote "${lot.title}" eliminado.`);
+      setRefreshKey((key) => key + 1);
+    } catch (error) {
+      setCancelMsg(errorMessage(error));
     }
   }
 
@@ -275,7 +301,7 @@ export default function AuctioneerPanel() {
             </div>
 
             {cancelMsg && (
-              <p className={cancelMsg.includes("cancelado") ? "msg msg-ok" : "msg msg-err"}>
+              <p className={cancelMsg.includes("cancelado") || cancelMsg.includes("eliminado") ? "msg msg-ok" : "msg msg-err"}>
                 {cancelMsg}
               </p>
             )}
@@ -294,7 +320,7 @@ export default function AuctioneerPanel() {
                       <th>Fim</th>
                       <th>Lance atual</th>
                       <th>Lances</th>
-                      <th></th>
+                      <th>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -331,6 +357,12 @@ export default function AuctioneerPanel() {
                         </td>
                         <td className="muted">{l.bidCount}</td>
                         <td>
+                          {l.status === "scheduled" && l.bidCount === 0 && (
+                            <div className="row-actions">
+                              <button className="btn btn-sm btn-ghost" onClick={() => beginEdit(l)}>Editar</button>
+                              <button className="btn btn-sm btn-danger" onClick={() => void deleteLot(l)}>Eliminar</button>
+                            </div>
+                          )}
                           {(l.status === "scheduled" || l.status === "live") && (
                             <button
                               className="btn btn-sm btn-danger"
@@ -351,36 +383,40 @@ export default function AuctioneerPanel() {
 
         {/* Formulário fixo ao lado dos resultados */}
         <aside
-          className={`panel-aside${selected ? " panel-aside-active" : ""}`}
+          className={`panel-aside${selected || editingLot ? " panel-aside-active" : ""}`}
           ref={createPanelRef}
         >
           <div className="create-card card">
-            {selected ? (
+            {selected || editingLot ? (
               <>
                 <div className="create-preview">
                   <img
-                    src={imageSrc(selected.imageUrl)}
-                    alt={selected.title}
+                    src={imageSrc(selected?.imageUrl ?? editingLot?.imageUrl)}
+                    alt={selected?.title ?? editingLot?.title ?? ""}
                     onError={(e) => {
                       e.currentTarget.src = PLACEHOLDER;
                     }}
                   />
                   <div className="create-preview-info">
                     <span className="create-kicker">Obra selecionada</span>
-                    <strong>{selected.title}</strong>
-                    <span className="muted clamp1">{selected.artist ?? "—"}</span>
+                    <strong>{selected?.title ?? editingLot?.title}</strong>
+                    <span className="muted clamp1">{selected?.artist ?? editingLot?.artist ?? "—"}</span>
                   </div>
                   <button
                     type="button"
                     className="btn btn-sm btn-ghost create-clear"
-                    onClick={() => setSelected(null)}
+                    onClick={() => {
+                      setSelected(null);
+                      setEditingLot(null);
+                    }}
                     aria-label="Limpar seleção"
                   >
                     <Icon name="x" size={14} />
                   </button>
                 </div>
 
-                <h2>2. Criar lote</h2>
+                <h2>{editingLot ? "Editar lote" : "2. Criar lote"}</h2>
+                {editingLot && !selected && <p className="muted">A obra não muda. Para a substituir, pesquise e selecione outra obra na secção à esquerda.</p>}
                 <form onSubmit={createLot} className="form create-form">
                   <div className="field">
                     <label htmlFor="start-price">Lance inicial (R$)</label>
@@ -426,7 +462,7 @@ export default function AuctioneerPanel() {
                   {lotError && <p className="msg msg-err">{lotError}</p>}
                   {lotMsg && <p className="msg msg-ok">{lotMsg}</p>}
                   <button className="btn btn-primary btn-block" disabled={busy}>
-                    {busy ? "Criando…" : <><Icon name="gavel" size={16} /> Publicar lote</>}
+                    {busy ? "A guardar…" : <><Icon name="gavel" size={16} /> {editingLot ? "Guardar alterações" : "Publicar lote"}</>}
                   </button>
                 </form>
               </>

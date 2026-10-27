@@ -69,6 +69,100 @@ export async function createLot(
   return mapLot(rows[0]);
 }
 
+export async function updateLot(
+  lotId: string,
+  auctioneerId: string,
+  input: {
+    externalId?: string;
+    startPriceCents?: bigint;
+    minIncrementCents?: bigint;
+    startAt?: Date;
+    endAt?: Date;
+  }
+) {
+  const artwork = input.externalId ? await getArtwork(input.externalId) : null;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query(
+            `SELECT auctioneer_id, external_id, title, artist, date_display, medium,
+              image_url, attributes, start_price_cents, min_increment_cents,
+              start_at, end_at, bid_count, cancelled_at, settled_at,
+              clock_timestamp() AS db_now
+       FROM lots WHERE id = $1 FOR UPDATE`,
+      [lotId]
+    );
+    const lot = rows[0];
+    if (!lot || lot.auctioneer_id !== auctioneerId) throw new AppError(404, "LOT_NOT_FOUND");
+    if (lot.cancelled_at || lot.settled_at || lot.bid_count > 0 || lot.db_now >= lot.start_at) {
+      throw new AppError(409, "LOT_NOT_EDITABLE");
+    }
+
+    const startAt: Date = input.startAt ?? lot.start_at;
+    const endAt: Date = input.endAt ?? lot.end_at;
+    if (startAt <= lot.db_now || endAt <= startAt) throw new AppError(400, "LOT_DATES_INVALID");
+    const { rows: bidRows } = await client.query("SELECT 1 FROM bids WHERE lot_id = $1 LIMIT 1", [lotId]);
+    if (bidRows.length) throw new AppError(409, "LOT_NOT_EDITABLE");
+
+    const { rows: updated } = await client.query(
+      `UPDATE lots SET
+         external_id = $1, title = $2, artist = $3, date_display = $4, medium = $5,
+         image_url = $6, attributes = $7, start_price_cents = $8,
+         min_increment_cents = $9, start_at = $10, end_at = $11
+       WHERE id = $12
+       RETURNING ${PUBLIC_COLUMNS}`,
+      [
+        artwork ? artwork.externalId : lot.external_id,
+        artwork ? artwork.title : lot.title,
+        artwork ? artwork.artist : lot.artist,
+        artwork ? artwork.dateDisplay : lot.date_display,
+        artwork ? artwork.medium : lot.medium,
+        artwork ? artwork.imageUrl : lot.image_url,
+        artwork ? JSON.stringify(artwork.attributes) : lot.attributes,
+        input.startPriceCents?.toString() ?? String(lot.start_price_cents),
+        input.minIncrementCents?.toString() ?? String(lot.min_increment_cents),
+        startAt,
+        endAt,
+        lotId,
+      ]
+    );
+    await client.query("COMMIT");
+    return mapLot(updated[0]);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteLot(lotId: string, auctioneerId: string): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query(
+      `SELECT auctioneer_id, bid_count, settled_at, clock_timestamp() AS db_now,
+              start_at, cancelled_at
+       FROM lots WHERE id = $1 FOR UPDATE`,
+      [lotId]
+    );
+    const lot = rows[0];
+    if (!lot || lot.auctioneer_id !== auctioneerId) throw new AppError(404, "LOT_NOT_FOUND");
+    const { rows: bids } = await client.query("SELECT 1 FROM bids WHERE lot_id = $1 LIMIT 1", [lotId]);
+    const { rows: receipts } = await client.query("SELECT 1 FROM receipts WHERE lot_id = $1 LIMIT 1", [lotId]);
+    if (lot.settled_at || lot.bid_count > 0 || bids.length > 0 || receipts.length > 0 || (!lot.cancelled_at && lot.db_now >= lot.start_at)) {
+      throw new AppError(409, "LOT_NOT_REMOVABLE");
+    }
+    await client.query("DELETE FROM lots WHERE id = $1", [lotId]);
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 // Vitrine pública: nunca devolve cancelados
 export async function listShowcase(search?: string) {
   await settleDueLots();

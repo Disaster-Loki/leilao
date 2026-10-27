@@ -145,6 +145,11 @@ export default function Layout() {
                 <span className="nav-icon"><Icon name="wallet" size={15} /></span> Carteira
               </NavLink>
             )}
+            {user && (
+              <NavLink to="/account" className={linkClass}>
+                <span className="nav-icon"><Icon name="user" size={15} /></span> Conta
+              </NavLink>
+            )}
           </nav>
 
           <div className="nav-actions">
@@ -215,6 +220,11 @@ export default function Layout() {
           {user && (
             <NavLink to="/wallet" className="mobile-link" onClick={() => setMenuOpen(false)}>
               <Icon name="wallet" size={16} /> Carteira
+            </NavLink>
+          )}
+          {user && (
+            <NavLink to="/account" className="mobile-link" onClick={() => setMenuOpen(false)}>
+              <Icon name="user" size={16} /> A minha conta
             </NavLink>
           )}
           {user ? (

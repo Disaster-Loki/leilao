@@ -91,6 +91,16 @@ export function errorMessage(e: unknown): string {
       return "O depósito excede o valor máximo permitido.";
     case "WALLET_ABOVE_MAXIMUM":
       return "Este depósito excederia o saldo máximo permitido na carteira.";
+    case "INVALID_CURRENT_PASSWORD":
+      return "A senha atual está incorreta.";
+    case "ACCOUNT_HAS_HISTORY":
+      return "A conta tem atividade financeira ou lotes e não pode ser eliminada. Contacte o suporte.";
+    case "LOT_NOT_EDITABLE":
+      return "Este lote já começou, tem lances ou foi encerrado e não pode ser editado.";
+    case "LOT_NOT_REMOVABLE":
+      return "Só é possível eliminar lotes sem lances e ainda não liquidados.";
+    case "LOT_DATES_INVALID":
+      return "O fim do lote deve ser posterior ao início e ainda estar no futuro.";
     case "ALREADY_LEADING":
       return "Já está a ganhar este lote, não pode cobrir o seu próprio lance.";
     case "LOT_NOT_STARTED":
