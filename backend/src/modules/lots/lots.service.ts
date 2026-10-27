@@ -2,6 +2,7 @@ import { pool } from "../../db/pool";
 import { AppError } from "../../middleware/error";
 import { getArtwork } from "../external/artic.client";
 import { settleDueLots } from "../settlement/settlement.service";
+import { centsToString } from "../../money";
 
 // Estado calculado pelo relógio do banco (modelo híbrido)
 export const STATUS_SQL = `
@@ -28,11 +29,11 @@ function mapLot(r: any) {
     medium: r.medium,
     imageUrl: r.image_url,
     attributes: r.attributes,
-    startPriceCents: Number(r.start_price_cents),
-    minIncrementCents: Number(r.min_increment_cents),
+    startPriceCents: centsToString(r.start_price_cents),
+    minIncrementCents: centsToString(r.min_increment_cents),
     startAt: r.start_at,
     endAt: r.end_at,
-    currentBidCents: r.current_bid_cents === null ? null : Number(r.current_bid_cents),
+    currentBidCents: r.current_bid_cents === null ? null : centsToString(r.current_bid_cents),
     bidCount: r.bid_count,
     settledAt: r.settled_at,
     status: r.status as "scheduled" | "live" | "ended" | "cancelled",
@@ -44,8 +45,8 @@ export async function createLot(
   auctioneerId: string,
   input: {
     externalId: string;
-    startPriceCents: number;
-    minIncrementCents: number;
+    startPriceCents: bigint;
+    minIncrementCents: bigint;
     startAt: Date;
     endAt: Date;
   }
@@ -62,7 +63,7 @@ export async function createLot(
     [
       auctioneerId, art.externalId, art.title, art.artist, art.dateDisplay, art.medium,
       art.imageUrl, JSON.stringify(art.attributes),
-      input.startPriceCents, input.minIncrementCents, input.startAt, input.endAt,
+      input.startPriceCents.toString(), input.minIncrementCents.toString(), input.startAt, input.endAt,
     ]
   );
   return mapLot(rows[0]);
@@ -109,8 +110,8 @@ export async function listMine(auctioneerId: string) {
   const lots = rows.map(mapLot);
   const totalReceivedCents = lots
     .filter((l) => l.settledAt && l.currentBidCents)
-    .reduce((sum, l) => sum + (l.currentBidCents ?? 0), 0);
-  return { lots, totalReceivedCents };
+    .reduce((sum, l) => sum + BigInt(l.currentBidCents ?? "0"), 0n);
+  return { lots, totalReceivedCents: totalReceivedCents.toString() };
 }
 
 export async function cancelLot(lotId: string, auctioneerId: string) {
@@ -134,7 +135,7 @@ export async function cancelLot(lotId: string, auctioneerId: string) {
     if (lot.leader_id && lot.current_bid_cents) {
       await client.query(
         "UPDATE wallets SET committed_cents = committed_cents - $1 WHERE user_id = $2",
-        [lot.current_bid_cents, lot.leader_id]
+        [String(lot.current_bid_cents), lot.leader_id]
       );
     }
 

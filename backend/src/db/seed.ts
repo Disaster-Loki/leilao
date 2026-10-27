@@ -24,19 +24,19 @@ const users = [
     email: "leiloeiro@leilao.com",
     name: "Leiloeiro Demo",
     role: "auctioneer",
-    deposit: 0,
+    deposit: 0n,
   },
   {
     email: "ana@leilao.com",
     name: "Ana Licitante",
     role: "bidder",
-    deposit: 500_000,
+    deposit: 500_000n,
   },
   {
     email: "bruno@leilao.com",
     name: "Bruno Licitante",
     role: "bidder",
-    deposit: 500_000,
+    deposit: 500_000n,
   },
 ] as const;
 
@@ -64,7 +64,7 @@ async function seed() {
         `INSERT INTO wallets (user_id, total_cents)
          VALUES ($1, $2)
          ON CONFLICT (user_id) DO NOTHING`,
-        [rows[0].id, u.deposit]
+        [rows[0].id, u.deposit.toString()]
       );
       if (u.deposit > 0) {
         // Só regista o depósito se a carteira acabou de ser criada
@@ -75,7 +75,7 @@ async function seed() {
              SELECT 1 FROM wallet_transactions
              WHERE user_id = $1 AND type = 'deposit'
            )`,
-          [rows[0].id, u.deposit]
+          [rows[0].id, u.deposit.toString()]
         );
       }
     }
@@ -135,8 +135,8 @@ async function seed() {
             dimensions: "89.9 × 94.1 cm (35 3/8 × 37 1/16 in.)",
             medium_display: "Oil on canvas",
           }),
-          100_000, // lance inicial: R$ 1.000,00
-          10_000,  // incremento: R$ 100,00
+          "100000", // lance inicial: R$ 1.000,00
+          "10000",  // incremento: R$ 100,00
           startAt,
           endAt,
         ]
@@ -152,15 +152,15 @@ async function seed() {
 
     if (bidCheck[0].bid_count === 0) {
       const bidsToPlace = [
-        { bidderId: anaId, amountCents: 100_000 },   // R$ 1.000,00 (lance inicial)
-        { bidderId: brunoId, amountCents: 110_000 },  // R$ 1.100,00
-        { bidderId: anaId, amountCents: 120_000 },    // R$ 1.200,00 (Ana está ganhando)
+        { bidderId: anaId, amountCents: 100_000n },   // R$ 1.000,00 (lance inicial)
+        { bidderId: brunoId, amountCents: 110_000n },  // R$ 1.100,00
+        { bidderId: anaId, amountCents: 120_000n },    // R$ 1.200,00 (Ana está ganhando)
       ];
 
       let prevHash = GENESIS;
       let sequence = 0;
       let leaderId = "";
-      let lastAmount = 0;
+      let lastAmount = 0n;
 
       for (const bid of bidsToPlace) {
         sequence++;
@@ -177,20 +177,20 @@ async function seed() {
         await client.query(
           `INSERT INTO bids (lot_id, bidder_id, sequence, amount_cents, created_at, prev_hash, hash)
            VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-          [lotId, bid.bidderId, sequence, bid.amountCents, createdAt, prevHash, hash]
+          [lotId, bid.bidderId, sequence, bid.amountCents.toString(), createdAt, prevHash, hash]
         );
 
         // Devolve comprometido ao líder anterior
         if (leaderId) {
           await client.query(
             "UPDATE wallets SET committed_cents = committed_cents - $1 WHERE user_id = $2",
-            [lastAmount, leaderId]
+            [lastAmount.toString(), leaderId]
           );
         }
         // Compromete o novo
         await client.query(
           "UPDATE wallets SET committed_cents = committed_cents + $1 WHERE user_id = $2",
-          [bid.amountCents, bid.bidderId]
+          [bid.amountCents.toString(), bid.bidderId]
         );
 
         prevHash = hash;
@@ -203,7 +203,7 @@ async function seed() {
         `UPDATE lots
          SET bid_count = $1, current_bid_cents = $2, leader_id = $3, head_hash = $4
          WHERE id = $5`,
-        [sequence, lastAmount, leaderId, prevHash, lotId]
+        [sequence, lastAmount.toString(), leaderId, prevHash, lotId]
       );
     }
 

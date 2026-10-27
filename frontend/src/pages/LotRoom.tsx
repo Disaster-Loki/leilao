@@ -5,12 +5,11 @@ import { api } from "../api/client";
 import { useAuth } from "../auth/auth-context";
 import {
   errorMessage,
-  formatMoney,
   formatDateTime,
+  formatTime,
   getBrowserTimeZoneLabel,
-  parseMoney,
-  toInputMoney,
 } from "../lib/utils";
+import { centsToApi, formatCents, formatReaisInput, parseReaisToCents } from "../lib/money";
 import type { Room, Wallet } from "../types";
 import Countdown from "../components/Countdown";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
@@ -111,24 +110,27 @@ export default function LotRoom() {
   const ended = lot.status === "ended";
   const minNext =
     lot.bidCount === 0
-      ? lot.startPriceCents
-      : (lot.currentBidCents ?? 0) + lot.minIncrementCents;
+      ? BigInt(lot.startPriceCents)
+      : BigInt(lot.currentBidCents ?? "0") + BigInt(lot.minIncrementCents);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setFeedback(null);
-    const cents = parseMoney(amount);
-    if (!cents) {
-      setFeedback({ ok: false, text: "Informe um valor válido, ex: 150,00" });
+    let cents: bigint;
+    try {
+      cents = parseReaisToCents(amount);
+      if (cents <= 0n) throw new Error("Informe um valor maior que zero.");
+    } catch (error) {
+      setFeedback({ ok: false, text: error instanceof Error ? error.message : "Informe um valor válido." });
       return;
     }
     setSending(true);
     try {
       await api(`/lots/${id}/bids`, {
         method: "POST",
-        body: JSON.stringify({ amountCents: cents }),
+        body: JSON.stringify({ amountCents: centsToApi(cents) }),
       });
-      setFeedback({ ok: true, text: `Lance de ${formatMoney(cents)} aceito!` });
+      setFeedback({ ok: true, text: `Lance de ${formatCents(cents)} aceito!` });
       setAmount("");
       setRefreshKey((k) => k + 1);
     } catch (err) {
@@ -214,7 +216,7 @@ export default function LotRoom() {
                   : "Lance atual"}
               </p>
               <p className="bid-amount">
-                {formatMoney(lot.currentBidCents ?? lot.startPriceCents)}
+                {formatCents(lot.currentBidCents ?? lot.startPriceCents)}
               </p>
             </div>
             {live && (
@@ -227,12 +229,13 @@ export default function LotRoom() {
 
           <p className="muted bid-meta">
             {lot.bidCount} {lot.bidCount === 1 ? "lance" : "lances"} · incremento
-            mínimo {formatMoney(lot.minIncrementCents)}
+            mínimo {formatCents(lot.minIncrementCents)}
           </p>
 
           {lot.status === "scheduled" && (
             <div className="msg msg-info">
               <Icon name="clock" size={15} /> Começa em {formatDateTime(lot.startAt)}
+              <span className="muted"> ({getBrowserTimeZoneLabel()})</span>
             </div>
           )}
           {ended && (
@@ -266,7 +269,7 @@ export default function LotRoom() {
             <form onSubmit={submit} className="bid-form">
               {wallet && (
                 <p className="muted wallet-hint">
-                  <Icon name="wallet" size={15} /> Disponível: <strong>{formatMoney(wallet.availableCents)}</strong>
+                  <Icon name="wallet" size={15} /> Disponível: <strong>{formatCents(wallet.availableCents)}</strong>
                 </p>
               )}
               <div className="bid-input-row">
@@ -276,7 +279,7 @@ export default function LotRoom() {
                     id="bid-amount"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    placeholder={toInputMoney(minNext)}
+                    placeholder={formatReaisInput(minNext)}
                     inputMode="decimal"
                   />
                 </div>
@@ -284,9 +287,9 @@ export default function LotRoom() {
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
-                onClick={() => setAmount(toInputMoney(minNext))}
+                onClick={() => setAmount(formatReaisInput(minNext))}
               >
-                Mínimo: {formatMoney(minNext)}
+                Mínimo: {formatCents(minNext)}
               </button>
               <button
                 className="btn btn-primary btn-block"
@@ -339,9 +342,9 @@ export default function LotRoom() {
                       {b.bidder}
                       {b.isMine && <span className="you-badge"> (você)</span>}
                     </td>
-                    <td className="bid-value">{formatMoney(b.amountCents)}</td>
+                    <td className="bid-value">{formatCents(b.amountCents)}</td>
                     <td className="muted">
-                      {new Date(b.createdAt).toLocaleTimeString("pt-BR")}
+                      {formatTime(b.createdAt)}
                     </td>
                   </tr>
                 ))}
@@ -380,7 +383,7 @@ export default function LotRoom() {
             <p className="muted">
               Arremataste <strong>{lot.title}</strong> por{" "}
               <strong className="win-amount">
-                {formatMoney(lot.currentBidCents ?? lot.startPriceCents)}
+                {formatCents(lot.currentBidCents ?? lot.startPriceCents)}
               </strong>
               .
             </p>

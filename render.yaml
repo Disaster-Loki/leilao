@@ -12,6 +12,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+      - key: TZ
+        value: UTC
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
@@ -20,3 +22,9 @@ services:
         generateValue: true
       - key: FRONTEND_URL
         sync: false
+      - key: MIN_DEPOSIT_CENTS
+        value: "1"
+      - key: MAX_DEPOSIT_CENTS
+        value: "100000000000"
+      - key: MAX_WALLET_CENTS
+        value: "9223372036854775807"

@@ -2,14 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
-import { errorMessage, formatMoney, formatDateTime, fromDatetimeLocalInput, parseMoney, toDatetimeLocalInput } from "../lib/utils";
+import { errorMessage, formatDateTime, fromDatetimeLocalInput, getBrowserTimeZoneLabel, toDatetimeLocalInput } from "../lib/utils";
+import { centsToApi, formatCents, parseReaisToCents } from "../lib/money";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
 import Icon from "../components/Icon";
 import type { ArtworkResult, Lot } from "../types";
 
 interface PanelData {
   lots: Lot[];
-  totalReceivedCents: number;
+  totalReceivedCents: string;
 }
 
 export default function AuctioneerPanel() {
@@ -88,10 +89,16 @@ export default function AuctioneerPanel() {
     if (!selected) return;
     setLotError(null);
     setLotMsg(null);
-    const startPriceCents = parseMoney(startPrice);
-    const minIncrementCents = parseMoney(minIncrement);
-    if (!startPriceCents || !minIncrementCents) {
-      setLotError("Verifique os valores de preço e incremento.");
+    let startPriceCents: bigint;
+    let minIncrementCents: bigint;
+    try {
+      startPriceCents = parseReaisToCents(startPrice);
+      minIncrementCents = parseReaisToCents(minIncrement);
+      if (startPriceCents <= 0n || minIncrementCents <= 0n) {
+        throw new Error("Os valores devem ser maiores que zero.");
+      }
+    } catch (error) {
+      setLotError(error instanceof Error ? error.message : "Verifique os valores de preço e incremento.");
       return;
     }
     setBusy(true);
@@ -100,8 +107,8 @@ export default function AuctioneerPanel() {
         method: "POST",
         body: JSON.stringify({
           externalId: selected.externalId,
-          startPriceCents,
-          minIncrementCents,
+          startPriceCents: centsToApi(startPriceCents),
+          minIncrementCents: centsToApi(minIncrementCents),
           startAt: fromDatetimeLocalInput(startAt).toISOString(),
           endAt: fromDatetimeLocalInput(endAt).toISOString(),
         }),
@@ -175,7 +182,7 @@ export default function AuctioneerPanel() {
           <div className="stat-mini card">
             <span className="stat-mini-icon"><Icon name="wallet" size={17} /></span>
             <div>
-              <strong className="ok-text">{formatMoney(data.totalReceivedCents)}</strong>
+              <strong className="ok-text">{formatCents(data.totalReceivedCents)}</strong>
               <span>recebido ({endedCount} encerrados)</span>
             </div>
           </div>
@@ -283,6 +290,7 @@ export default function AuctioneerPanel() {
                     <tr>
                       <th>Obra</th>
                       <th>Status</th>
+                      <th>Início</th>
                       <th>Fim</th>
                       <th>Lance atual</th>
                       <th>Lances</th>
@@ -314,10 +322,11 @@ export default function AuctioneerPanel() {
                             {statusLabel[l.status]}
                           </span>
                         </td>
-                        <td className="muted">{formatDateTime(l.endAt)} <span className="muted">({Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"})</span></td>
+                        <td className="muted">{formatDateTime(l.startAt)} <span className="muted">({getBrowserTimeZoneLabel()})</span></td>
+                        <td className="muted">{formatDateTime(l.endAt)} <span className="muted">({getBrowserTimeZoneLabel()})</span></td>
                         <td>
                           {l.currentBidCents !== null
-                            ? <strong>{formatMoney(l.currentBidCents)}</strong>
+                            ? <strong>{formatCents(l.currentBidCents)}</strong>
                             : <span className="muted">—</span>}
                         </td>
                         <td className="muted">{l.bidCount}</td>
@@ -412,7 +421,7 @@ export default function AuctioneerPanel() {
                     />
                   </div>
                   <p className="muted" style={{ marginTop: "-0.25rem" }}>
-                    Fuso do navegador: {Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"}
+                    Fuso do navegador: {getBrowserTimeZoneLabel()}
                   </p>
                   {lotError && <p className="msg msg-err">{lotError}</p>}
                   {lotMsg && <p className="msg msg-ok">{lotMsg}</p>}

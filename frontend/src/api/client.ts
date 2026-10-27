@@ -2,6 +2,7 @@ const API = import.meta.env.API_URL as string | undefined;
 
 export interface ApiError {
   error: string;
+  message?: string;
   details?: Record<string, unknown> | unknown[];
 }
 

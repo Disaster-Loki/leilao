@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { computeBidHash, GENESIS, pseudonym } from "./hash";
+import { computeBidHash, GENESIS, pseudonym } from "../../src/modules/bids/hash";
 
 const base = {
   prevHash: GENESIS,

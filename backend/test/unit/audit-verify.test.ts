@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { computeBidHash, GENESIS } from "../bids/hash";
-import { verifyBidChain } from "./verify";
-import type { AuditBidRow, AuditLotRow } from "./verify";
+import { computeBidHash, GENESIS } from "../../src/modules/bids/hash";
+import { verifyBidChain } from "../../src/modules/audit/verify";
+import type { AuditBidRow, AuditLotRow } from "../../src/modules/audit/verify";
 
 const LOT_ID = "1a2b3c4d-0000-4000-8000-000000000001";
 
@@ -69,32 +69,20 @@ test("remover o último lance é detetado pelas âncoras do lote", () => {
 
 test("remover um lance do meio quebra a sequência", () => {
   const { bids, lot } = fixture();
-  const issues = verifyBidChain({
-    lotId: LOT_ID,
-    lot,
-    bids: [bids[0], bids[2]],
-  });
+  const issues = verifyBidChain({ lotId: LOT_ID, lot, bids: [bids[0], bids[2]] });
   assert.ok(codes(issues).includes("SEQUENCE_GAP"));
   assert.ok(codes(issues).includes("PREV_HASH_MISMATCH"));
 });
 
 test("alterar o valor atual do lote é detetado", () => {
   const { bids, lot } = fixture();
-  const issues = verifyBidChain({
-    lotId: LOT_ID,
-    lot: { ...lot, current_bid_cents: 999_999 },
-    bids,
-  });
+  const issues = verifyBidChain({ lotId: LOT_ID, lot: { ...lot, current_bid_cents: 999_999 }, bids });
   assert.ok(codes(issues).includes("CURRENT_BID_MISMATCH"));
 });
 
 test("lote liquidado exige comprovante", () => {
   const { bids, lot } = fixture();
-  const issues = verifyBidChain({
-    lotId: LOT_ID,
-    lot: { ...lot, settled_at: new Date() },
-    bids,
-  });
+  const issues = verifyBidChain({ lotId: LOT_ID, lot: { ...lot, settled_at: new Date() }, bids });
   assert.ok(codes(issues).includes("RECEIPT_MISSING"));
 });
 
@@ -131,7 +119,7 @@ test("valor do comprovante divergente é detetado", () => {
     lotId: LOT_ID,
     lot: { ...lot, settled_at: new Date() },
     bids,
-    receipt: { final_hash: prev, amount_cents: Number(last.amount_cents) + 1 },
+    receipt: { final_hash: prev, amount_cents: BigInt(last.amount_cents) + 1n },
     sale: { amount_cents: last.amount_cents },
   });
   assert.ok(codes(issues).includes("RECEIPT_AMOUNT_MISMATCH"));
@@ -145,7 +133,7 @@ test("movimento financeiro divergente é detetado", () => {
     lot: { ...lot, settled_at: new Date() },
     bids,
     receipt: { final_hash: prev, amount_cents: last.amount_cents },
-    sale: { amount_cents: Number(last.amount_cents) + 1 },
+    sale: { amount_cents: BigInt(last.amount_cents) + 1n },
   });
   assert.ok(codes(issues).includes("SETTLEMENT_MISMATCH"));
 });

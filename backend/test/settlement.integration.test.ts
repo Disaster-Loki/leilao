@@ -19,7 +19,7 @@ test("liquidação: débito, crédito, comprovante público e auditoria", async 
   const bid = await request(`/lots/${lot.id}/bids`, {
     method: "POST",
     token: bruno.token,
-    body: { amountCents: 50_000 },
+    body: { amountCents: "50000" },
   });
   assert.equal(bid.status, 201);
 
@@ -46,7 +46,7 @@ test("liquidação: débito, crédito, comprovante público e auditoria", async 
   const lateBid = await request(`/lots/${lot.id}/bids`, {
     method: "POST",
     token: ana.token,
-    body: { amountCents: 50_000 },
+    body: { amountCents: "50000" },
   });
   assert.equal(lateBid.status, 400);
   assert.equal(lateBid.body.error, "LOT_ENDED");
@@ -61,21 +61,21 @@ test("liquidação: débito, crédito, comprovante público e auditoria", async 
 
   const receipt = await request(`/receipts/${won.receiptId}`);
   assert.equal(receipt.status, 200);
-  assert.equal(receipt.body.amountCents, 50_000);
+  assert.equal(receipt.body.amountCents, "50000");
   assert.match(receipt.body.winner, /^Licitante #[A-Z0-9]+$/);
   assert.equal(JSON.stringify(receipt.body).includes(bruno.user.email), false);
   assert.equal(JSON.stringify(receipt.body).includes(bruno.user.name), false);
 
   const brunoWallet = await request("/wallet", { token: bruno.token });
   assert.equal(brunoWallet.status, 200);
-  assert.equal(brunoWallet.body.totalCents, 450_000);
-  assert.equal(brunoWallet.body.committedCents, 0);
-  assert.equal(brunoWallet.body.availableCents, 450_000);
+  assert.equal(brunoWallet.body.totalCents, "450000");
+  assert.equal(brunoWallet.body.committedCents, "0");
+  assert.equal(brunoWallet.body.availableCents, "450000");
 
   const auctioneerWallet = await request("/wallet", { token: auctioneer.token });
   assert.equal(auctioneerWallet.status, 200);
-  assert.equal(auctioneerWallet.body.totalCents, 50_000);
-  assert.equal(auctioneerWallet.body.committedCents, 0);
+  assert.equal(auctioneerWallet.body.totalCents, "50000");
+  assert.equal(auctioneerWallet.body.committedCents, "0");
 
   const audit = await request(`/audit/${lot.id}`);
   assert.equal(audit.status, 200);
@@ -91,6 +91,7 @@ test("liquidação: débito, crédito, comprovante público e auditoria", async 
   });
   assert.equal(cancelSettled.status, 409);
   assert.equal(cancelSettled.body.error, "LOT_ALREADY_SETTLED");
+  assert.match(cancelSettled.body.message, /arrematado/);
 });
 
 test("lote sem lances fecha sem vencedor e sem comprovante", async () => {
@@ -123,7 +124,7 @@ test("auditoria deteta alteração direta no banco", async () => {
   const bid = await request(`/lots/${lot.id}/bids`, {
     method: "POST",
     token: bruno.token,
-    body: { amountCents: 50_000 },
+    body: { amountCents: "50000" },
   });
   assert.equal(bid.status, 201);
 
@@ -147,4 +148,69 @@ test("auditoria deteta alteração direta no banco", async () => {
   assert.equal(tampered.body.valid, false);
   assert.ok(tampered.body.issues.length > 0);
   assert.ok(tampered.body.firstFailure.code);
+});
+
+test("lance acima de 2^53 liquida e reconcilia o ledger sem perda", async () => {
+  const { auctioneer } = getTestEnv();
+  const account = await request("/auth/register", {
+    method: "POST",
+    body: {
+      email: "big-money@teste.com",
+      name: "Licitante Grande",
+      password: "Leilao@123",
+      role: "bidder",
+    },
+  });
+  const bidder = account.body as { token: string };
+  const amountCents = "9007199254740993";
+  const auctioneerBefore = await request("/wallet", { token: auctioneer.token });
+  const lot = await createLot({
+    startPriceCents: amountCents,
+    minIncrementCents: "1",
+  });
+  const deposit = await request("/wallet/deposit", {
+    method: "POST",
+    token: bidder.token,
+    body: { amountCents },
+  });
+  assert.equal(deposit.status, 201);
+  assert.equal(deposit.body.totalCents, amountCents);
+
+  const bid = await request(`/lots/${lot.id}/bids`, {
+    method: "POST",
+    token: bidder.token,
+    body: { amountCents },
+  });
+  assert.equal(bid.status, 201);
+  assert.equal(bid.body.amountCents, amountCents);
+  assert.equal(bid.body.wallet.committedCents, amountCents);
+
+  await pool.query("UPDATE lots SET end_at = now() - interval '1 second' WHERE id = $1", [lot.id]);
+  await request("/lots");
+  const mine = await request("/my/bids", { token: bidder.token });
+  const won = mine.body.find((item: { lotId: string }) => item.lotId === lot.id);
+  assert.ok(won);
+  const receipt = await request(`/receipts/${won.receiptId}`);
+  assert.equal(receipt.body.amountCents, amountCents);
+
+  const wallet = await request("/wallet", { token: bidder.token });
+  assert.equal(wallet.body.totalCents, "0");
+  assert.equal(wallet.body.committedCents, "0");
+  const auctioneerWallet = await request("/wallet", { token: auctioneer.token });
+  assert.equal(
+    BigInt(auctioneerWallet.body.totalCents) - BigInt(auctioneerBefore.body.totalCents),
+    BigInt(amountCents),
+  );
+
+  const { rows } = await pool.query(
+    "SELECT type, amount_cents FROM wallet_transactions WHERE lot_id = $1 ORDER BY type",
+    [lot.id],
+  );
+  assert.equal(rows.length, 2);
+  assert.equal(rows.find((row) => row.type === "sale").amount_cents, amountCents);
+  assert.equal(rows.find((row) => row.type === "purchase").amount_cents, `-${amountCents}`);
+
+  const audit = await request(`/audit/${lot.id}`);
+  assert.equal(audit.body.valid, true);
+  assert.equal(audit.body.bids[0].amountCents, amountCents);
 });

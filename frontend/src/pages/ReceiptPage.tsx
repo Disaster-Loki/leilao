@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { errorMessage, formatMoney, formatDateTime } from "../lib/utils";
+import { errorMessage, formatDateTime, getBrowserTimeZoneLabel } from "../lib/utils";
+import { formatCents } from "../lib/money";
 import type { Receipt } from "../types";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
 import Icon from "../components/Icon";
@@ -45,13 +46,13 @@ export default function ReceiptPage() {
           <dd className="winner-name">{receipt.winner}</dd>
 
           <dt>Valor arrematado</dt>
-          <dd className="receipt-amount">{formatMoney(receipt.amountCents)}</dd>
+          <dd className="receipt-amount">{formatCents(receipt.amountCents)}</dd>
 
           <dt>Total de lances</dt>
           <dd>{receipt.bidCount}</dd>
 
           <dt>Data de emissão</dt>
-          <dd>{formatDateTime(receipt.issuedAt)}</dd>
+          <dd>{formatDateTime(receipt.issuedAt)} <span className="muted">({getBrowserTimeZoneLabel()})</span></dd>
 
           <dt>ID do comprovante</dt>
           <dd className="mono muted">{receipt.id}</dd>

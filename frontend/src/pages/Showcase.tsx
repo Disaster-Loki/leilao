@@ -23,11 +23,16 @@ function priceOf(lot: Lot) {
 
 function sortLots(lots: Lot[], order: SortOrder) {
   const copy = [...lots];
+  const compareMoney = (a: Lot, b: Lot) => {
+    const left = BigInt(priceOf(a));
+    const right = BigInt(priceOf(b));
+    return left < right ? -1 : left > right ? 1 : 0;
+  };
   switch (order) {
     case "price-asc":
-      return copy.sort((a, b) => priceOf(a) - priceOf(b));
+      return copy.sort(compareMoney);
     case "price-desc":
-      return copy.sort((a, b) => priceOf(b) - priceOf(a));
+      return copy.sort((a, b) => compareMoney(b, a));
     case "newest":
       return copy.sort(
         (a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime()

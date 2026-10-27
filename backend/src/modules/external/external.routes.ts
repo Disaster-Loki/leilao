@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AppError, asyncHandler } from "../../middleware/error";
 import { requireAuth, requireRole } from "../../middleware/auth";
 import { searchArtworks } from "./artic.client";
+import { APP_MESSAGES } from "../../messages";
 
 export const externalRouter = Router();
 
@@ -11,7 +12,11 @@ externalRouter.get(
   requireAuth,
   requireRole("auctioneer"),
   asyncHandler(async (req, res) => {
-    const { q } = z.object({ q: z.string().trim().min(2).max(100) }).parse(req.query);
+    const { q } = z.object({
+      q: z.string().trim()
+        .min(2, APP_MESSAGES.validation.minQuery)
+        .max(100, APP_MESSAGES.validation.maxQuery),
+    }).parse(req.query);
     res.json(await searchArtworks(q));
   })
 );
@@ -63,7 +68,10 @@ async function fetchImage(src: string) {
 externalRouter.get(
   "/image",
   asyncHandler(async (req, res) => {
-    const { src } = z.object({ src: z.string().url().max(600) }).parse(req.query);
+    const { src } = z.object({
+      src: z.string().url(APP_MESSAGES.validation.invalidImageUrl)
+        .max(600, APP_MESSAGES.validation.invalidUrl),
+    }).parse(req.query);
     const url = new URL(src);
     if (!ALLOWED_IMAGE_HOSTS.has(url.hostname) || !url.pathname.startsWith("/iiif/2/")) {
       throw new AppError(400, "INVALID_IMAGE_URL");

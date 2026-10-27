@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import type { Lot } from "../types";
-import { formatMoney, formatDateTime } from "../lib/utils";
+import { formatDateTime } from "../lib/utils";
+import { formatCents } from "../lib/money";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
 import Countdown from "./Countdown";
 
@@ -53,7 +54,7 @@ export default function LotCard({ lot }: Props) {
               {hasBid ? "Lance atual" : "Lance inicial"}
             </span>
             <p className="lot-price">
-              {formatMoney(hasBid ? (lot.currentBidCents as number) : lot.startPriceCents)}
+              {formatCents(hasBid ? lot.currentBidCents! : lot.startPriceCents)}
             </p>
           </div>
           {lot.status === "live" && (

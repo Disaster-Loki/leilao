@@ -56,7 +56,7 @@ export function verifyBidChain(input: {
       lotId,
       sequence: b.sequence,
       bidderId: b.bidder_id,
-      amountCents: Number(b.amount_cents),
+      amountCents: BigInt(b.amount_cents),
       createdAt: b.created_at,
     });
     if (expected !== b.hash) issues.push({ sequence: b.sequence, code: "HASH_MISMATCH" });
@@ -69,7 +69,7 @@ export function verifyBidChain(input: {
   if (prev !== lot.head_hash) issues.push({ sequence: null, code: "HEAD_HASH_MISMATCH" });
   if (bids.length !== lot.bid_count) issues.push({ sequence: null, code: "BID_COUNT_MISMATCH" });
   if (last) {
-    if (Number(last.amount_cents) !== Number(lot.current_bid_cents))
+    if (BigInt(last.amount_cents) !== BigInt(lot.current_bid_cents!))
       issues.push({ sequence: last.sequence, code: "CURRENT_BID_MISMATCH" });
     if (last.bidder_id !== lot.leader_id)
       issues.push({ sequence: last.sequence, code: "LEADER_MISMATCH" });
@@ -82,10 +82,10 @@ export function verifyBidChain(input: {
     } else {
       if (receipt.final_hash !== prev)
         issues.push({ sequence: null, code: "RECEIPT_HASH_MISMATCH" });
-      if (last && Number(receipt.amount_cents) !== Number(last.amount_cents))
+      if (last && BigInt(receipt.amount_cents) !== BigInt(last.amount_cents))
         issues.push({ sequence: null, code: "RECEIPT_AMOUNT_MISMATCH" });
     }
-    if (!sale || (last && Number(sale.amount_cents) !== Number(last.amount_cents)))
+    if (!sale || (last && BigInt(sale.amount_cents) !== BigInt(last.amount_cents)))
       issues.push({ sequence: null, code: "SETTLEMENT_MISMATCH" });
   }
 

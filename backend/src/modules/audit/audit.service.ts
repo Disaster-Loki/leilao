@@ -4,6 +4,7 @@ import { pseudonym } from "../bids/hash";
 import { STATUS_SQL } from "../lots/lots.service";
 import { settleDueLots } from "../settlement/settlement.service";
 import { verifyBidChain } from "./verify";
+import { centsToString } from "../../money";
 
 export async function auditLot(lotId: string) {
   await settleDueLots();
@@ -61,7 +62,7 @@ export async function auditLot(lotId: string) {
     headHash: lot.head_hash as string,
     bids: bids.map((b) => ({
       sequence: b.sequence,
-      amountCents: Number(b.amount_cents),
+      amountCents: centsToString(b.amount_cents),
       createdAt: b.created_at,
       bidder: pseudonym(b.bidder_id, lotId),
       prevHash: b.prev_hash,

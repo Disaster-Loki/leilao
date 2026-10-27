@@ -28,7 +28,9 @@ export async function settleLot(lotId: string): Promise<void> {
       return;
     }
 
-    const amount: string = lot.current_bid_cents;
+    const amount = BigInt(lot.current_bid_cents);
+    if (amount <= 0n) throw new Error("invalid settlement amount");
+    const amountCents = amount.toString();
 
     // Mesma ordem de bloqueio dos lances (por id), para não haver deadlock
     await client.query(
@@ -41,12 +43,12 @@ export async function settleLot(lotId: string): Promise<void> {
       `UPDATE wallets
           SET total_cents = total_cents - $1, committed_cents = committed_cents - $1
         WHERE user_id = $2`,
-      [amount, lot.leader_id]
+      [amountCents, lot.leader_id]
     );
     // Leiloeiro: recebe
     const received = await client.query(
       "UPDATE wallets SET total_cents = total_cents + $1 WHERE user_id = $2",
-      [amount, lot.auctioneer_id]
+      [amountCents, lot.auctioneer_id]
     );
     if (paid.rowCount === 0 || received.rowCount === 0) throw new Error("wallet missing in settlement");
 
@@ -54,13 +56,13 @@ export async function settleLot(lotId: string): Promise<void> {
       `INSERT INTO wallet_transactions (user_id, type, amount_cents, lot_id) VALUES
          ($1, 'purchase', -$3::bigint, $4),
          ($2, 'sale',      $3::bigint, $4)`,
-      [lot.leader_id, lot.auctioneer_id, amount, lotId]
+      [lot.leader_id, lot.auctioneer_id, amountCents, lotId]
     );
 
     await client.query(
       `INSERT INTO receipts (lot_id, winner_id, amount_cents, final_hash, created_at)
        VALUES ($1, $2, $3, $4, $5)`,
-      [lotId, lot.leader_id, amount, lot.head_hash, lot.now]
+      [lotId, lot.leader_id, amountCents, lot.head_hash, lot.now]
     );
 
     await client.query("UPDATE lots SET settled_at = $2 WHERE id = $1", [lotId, lot.now]);

@@ -24,7 +24,7 @@ leilao/
 │   ├── test/                  testes de integração (node:test + PostgreSQL)
 │   └── src/
 │       ├── config/            leitura e validação das variáveis de ambiente
-│       ├── db/                pool, reset, seed idempotente
+│       ├── db/                pool e seed idempotente
 │       ├── middleware/        autenticação/JWT, papéis e tratamento de erros
 │       ├── modules/           um módulo por domínio: auth, wallet, lots,
 │       │                      bids, settlement, receipts, audit, external
@@ -55,8 +55,8 @@ leilao/
   `auth`, `api` e `lib`. Não há estado global além da sessão e do tema.
 - **Configuração por ambiente:** segredos e URLs vêm de `.env`; o repositório
   versiona apenas `.env.example` e `.env.test` (este último só com valores de teste).
-- **Evolução da base de dados:** migrations versionadas em `backend/migrations`,
-  script de reset para desenvolvimento e seed idempotente com dados de teste.
+- **Evolução da base de dados:** migrations versionadas em `backend/migrations`
+  e seed idempotente com dados de teste.
 - **Fronteira com a API externa:** o navegador nunca chama o Art Institute
   diretamente; o backend faz a busca e guarda o snapshot no lote. As imagens
   públicas são resolvidas no Wikimedia Commons (o AIC bloqueia hotlink via
@@ -76,15 +76,16 @@ leilao/
 # Clone o repositório e entre na pasta
 git clone <url-do-repo> && cd leilao
 
-# Suba tudo (banco, reset, migração, seed, back-end e front-end)
+# Suba tudo (banco, migrações, seed, back-end e front-end)
 docker compose up
 ```
 
 O Compose usa apenas imagens oficiais (`postgres:16-alpine` e `node:22-alpine`);
-não há Dockerfiles no repositório. O serviço `migrate` apaga o schema `public`
-antes de migrar e semear, por isso cada `docker compose up` começa com a base de
-dados limpa. O PostgreSQL fica exposto no host em **5433** para não colidir com
-uma instalação local na 5432.
+não há Dockerfiles no repositório. O backend executa as migrations pendentes e
+o seed idempotente. Os dados permanecem no volume `pgdata` entre arranques; para
+apagar a base local e começar de novo, use `docker compose down -v` antes de
+subir os serviços. O PostgreSQL fica exposto no host em **5433** para não colidir
+com uma instalação local na 5432.
 
 Aguarde até ver `Seed concluído.` no log do serviço `migrate`. Depois abra:
 
@@ -121,7 +122,6 @@ CREATE DATABASE leilao OWNER leilao;
 cd backend
 cp .env.example .env      # depois edite os segredos
 npm install
-npm run reset             # opcional: apaga tudo antes de recomeçar
 npm run migrate:dev       # cria as tabelas
 npm run seed              # insere as contas de teste
 npm run dev               # sobe a API em http://localhost:3000
@@ -168,6 +168,9 @@ npm run build   # gera dist/ estático
 | `JWT_SECRET` | Segredo para assinar tokens de login |
 | `HMAC_SECRET` | Segredo da cadeia de hashes da auditoria. Deve ficar fora do banco |
 | `FRONTEND_URL` | Origem permitida no CORS |
+| `MIN_DEPOSIT_CENTS` | Depósito mínimo em centavos (padrão `1`) |
+| `MAX_DEPOSIT_CENTS` | Limite por depósito em centavos (padrão `100000000000`) |
+| `MAX_WALLET_CENTS` | Saldo total máximo por carteira em centavos (padrão BIGINT máximo) |
 
 ### frontend/.env
 
@@ -208,11 +211,16 @@ As permissões são verificadas **no servidor** em cada rota (middleware
   sala, lances, auditoria e comprovante nunca dependem da API.
 - **Snapshot feito no servidor:** o front envia só o `externalId`; os dados do item
   vêm da API, não do cliente.
-- **Imagens:** o AIC passou a devolver `403` (desafio Cloudflare) para pedidos de
-  imagem de terceiros, inclusive a partir do Render. O backend procura o mesmo
-  ficheiro de domínio público no Wikimedia Commons pelo `main_reference_number`
-  e guarda esse URL no lote. O proxy `/external/image?src=...` continua disponível
-  como fallback para URLs antigas do AIC, com cache e User-Agent de browser.
+- **Imagens (fluxo atual):** ao pesquisar ou criar um lote, o backend consulta o
+  Art Institute of Chicago para os metadados e procura a imagem correspondente no
+  Wikimedia Commons, primeiro pelo número de inventário (`main_reference_number`).
+  Quando encontra um ficheiro, guarda no snapshot do lote o URL HTTPS do CDN
+  Wikimedia; o front-end usa esse URL diretamente. Se não houver imagem no
+  Commons, o backend mantém como alternativa o URL IIIF do AIC. Para URLs IIIF
+  antigos ou de fallback, `imageSrc()` no front-end deteta `artic.edu` e encaminha
+  a imagem por `/external/image?src=...`; o backend valida o host e o caminho e
+  aplica cache em memória. Se a URL estiver ausente, inválida ou a imagem não
+  carregar, o componente apresenta o placeholder “Imagem indisponível”.
 - **Cancelamento:** só o dono do lote e só antes de liquidado. Usa o mesmo
   bloqueio de linha (`FOR UPDATE`) dos lances. Se já houver líder, o valor
   comprometido é libertado (volta ao disponível) na mesma transação.
@@ -244,6 +252,54 @@ As permissões são verificadas **no servidor** em cada rota (middleware
 - **Comprovante público e anônimo:** link por UUID (não adivinhável), com o vencedor
   como pseudónimo e o hash final da cadeia de lances.
 
+## Fusos horários e datas
+
+Instantes são guardados em colunas PostgreSQL `TIMESTAMPTZ` e transportados como
+ISO 8601 UTC (com `Z` ou offset explícito). O backend força `TZ=UTC` no arranque;
+Docker Compose e Render também declaram `TZ=UTC`. O endpoint `/time` lê
+`clock_timestamp()` da base de dados e devolve um instante UTC sem cache.
+
+A interface formata datas e horas na zona local do navegador, sem fuso fixo, e
+mostra o nome dessa zona junto das horas relevantes. O formulário
+`datetime-local` converte explicitamente a hora local para um instante UTC no
+envio. A contagem regressiva sincroniza-se com `/time`, compensa metade do RTT,
+usa o relógio monotónico do navegador, atualiza a cada segundo, volta a medir a
+cada 60 segundos e quando a página fica visível. O estado definitivo do lote é
+calculado pelo relógio da base de dados, não pelo relógio do utilizador.
+
+Não foi necessária migration de data/hora: a migration inicial já criou todas
+as colunas temporais como `TIMESTAMPTZ`. Converter novamente poderia deslocar
+instantes existentes.
+
+## Dinheiro e precisão numérica
+
+Todos os valores monetários ficam em centavos inteiros em colunas PostgreSQL
+`BIGINT`. No backend, cálculos, comparações, incrementos, saldos e liquidação
+usam `BigInt`; a API REST transmite centavos em strings decimais (por exemplo,
+`"12345600"`), porque JSON não serializa `BigInt` e o tipo JavaScript `Number`
+perde precisão acima de $2^{53}-1$. O front converte os textos recebidos para
+`BigInt`, calcula sem ponto flutuante e formata somente para exibição.
+
+`MIN_DEPOSIT_CENTS`, `MAX_DEPOSIT_CENTS` e `MAX_WALLET_CENTS` configuram os
+limites. Por padrão, o depósito máximo é R$ 1.000.000.000,00 e o saldo máximo
+é o BIGINT positivo do PostgreSQL. Os valores são lidos em centavos; erros de
+limite devolvem códigos estáveis e mensagem em português.
+
+A cadeia HMAC existente já canonicalizava `amountCents` como texto decimal
+antes de serializar o array. A migração mantém exatamente essa representação;
+assim, hashes já gravados permanecem válidos e novos lances com `BigInt` geram
+os mesmos bytes canónicos.
+
+## Mensagens e idioma
+
+As mensagens de erro legíveis escritas pela aplicação e as validações da API
+estão centralizadas em `backend/src/messages.ts` e são devolvidas em português.
+O formato preserva o campo `error` e os códigos estáveis em inglês (por exemplo,
+`BID_BELOW_MINIMUM`), usados pelo front-end para lógica e traduções. Mensagens
+genéricas do protocolo/framework, como `403 Forbidden`, `404 Not Found` e
+`500 Internal Server Error`, permanecem em inglês de propósito: não são erros
+específicos da aplicação e não devem ser mascarados.
+
 ## Credenciais de teste (seed)
 
 Rodar `npm run seed` na pasta `backend`.
@@ -260,16 +316,19 @@ Após o seed, os URLs do lote e da auditoria são impressos no terminal.
 
 ## Testes automatizados
 
-Os testes vivem no backend e usam o runner nativo `node:test`. Não é preciso
+Todos os testes do backend vivem em `backend/test` e usam o runner nativo
+`node:test`. Não é preciso
 navegador, `curl` ou `jq`.
 
 ```bash
 cd backend
 
-npm test                  # 16 testes unitários (hash da cadeia + verificação)
-npm run test:integration  # 11 testes de integração contra PostgreSQL real
+npm test                  # testes unitários do backend
+npm run test:integration  # testes de integração contra PostgreSQL real
 npm run test:all          # ambos
 ```
+
+Na pasta `frontend`, `npm test` executa os testes de dinheiro e fuso horário.
 
 Os testes unitários não precisam de base de dados. Os de integração leem
 `backend/.env.test`, **apagam e recriam o schema `public`** da base indicada e
@@ -281,6 +340,10 @@ sudo -u postgres psql -c "CREATE DATABASE leilao_test OWNER leilao;"
 # ou, se o utilizador já tiver permissão:
 createdb -h localhost -U leilao leilao_test
 ```
+
+Na revisão de precisão monetária, foram executados com sucesso os testes
+unitários, de integração (PostgreSQL real), de front-end e de migração/seed.
+Execute `npm run test:all` na pasta `backend` e `npm test` na pasta `frontend`.
 
 O HTTP para `api.artic.edu` e para o Wikimedia Commons é simulado nos testes,
 por isso correm offline e de forma determinística; a base de dados é real.
@@ -351,8 +414,8 @@ simultâneo não cause um falso alarme.
 |---|---|---|
 | Busca e filtro de lotes | ✅ | Pesquisa por título/artista/técnica, filtros por estado e ordenação por fim/preço/data |
 | Cancelamento com estorno automático | ✅ | O leiloeiro cancela lotes ainda não liquidados; o valor comprometido do líder volta a ficar disponível |
-| Docker Compose | ✅ | `docker compose up` sobe PostgreSQL, reset/migração/seed, API e front-end |
-| Testes automatizados | ✅ | 16 unitários + 11 de integração no backend (`node:test`, PostgreSQL real e API externa simulada) |
+| Docker Compose | ✅ | `docker compose up` sobe PostgreSQL, migrations/seed, API e front-end; os dados persistem no volume |
+| Testes automatizados | ✅ | 31 unitários + 19 de integração no backend (`node:test`, PostgreSQL real e API externa simulada), além de 23 testes do front |
 | Dark Mode | ✅ | Toggle no navbar em todas as páginas (incluindo login); preferência guardada em `localStorage` |
 
 ## Limitações e comportamentos conhecidos
@@ -361,12 +424,21 @@ simultâneo não cause um falso alarme.
   enunciado não define como alguém se torna leiloeiro. Numa aplicação real,
   isso seria restrito.
 - Recuperação de senha não foi implementada (fora do escopo do enunciado).
-- A imagem do lote depende do CDN do Wikimedia Commons. Se a obra não existir
-  lá, o cartão mostra o placeholder "Imagem indisponível".
+- Imagens novas priorizam o CDN do Wikimedia Commons. Se a obra não estiver lá,
+  é tentado o URL IIIF do AIC via proxy; se também falhar, mostra-se o placeholder.
 - O front usa polling (a cada 1–2 s) em vez de WebSocket. Num produto real
   usaria SSE ou WebSocket; polling foi suficiente para os requisitos do teste.
+- O serviço gratuito do Render pode adormecer. O agendador para nesse período;
+  a liquidação preguiçosa ocorre na próxima leitura da API.
+- Se o Art Institute ou o Wikimedia Commons falharem, a pesquisa/criação pode
+  falhar ou a imagem usar o fallback/placeholder. A interface mostra o erro da
+  pesquisa, mas não existe ainda um aviso persistente indicando modo degradado.
+- O seed é idempotente e mantém um lote ao vivo com três lances; não cria ainda
+  exemplos de todos os estados (agendado, encerrado, sem lances e a terminar em
+  2–3 minutos). Os dados atuais de produção podem acumular lotes encerrados de
+  execuções anteriores do seed.
 
-## Uso de inteligência artificial
+## Uso de IA
 
 O desenvolvimento foi feito em **três fases** com abordagens distintas:
 
@@ -397,15 +469,14 @@ estabelecidos. A IA:
 - Corrigiu erros de TypeScript e de build apontados durante o desenvolvimento
 
 Toda a lógica crítica (hooks de polling, countdown sincronizado com o servidor,
-deteção de prorrogação anti-sniping) foi revisada e ajustada pelo me.
+deteção de prorrogação anti-sniping) foi revista e ajustada manualmente.
 
 ### Fase 3 — Revisão, testes e endurecimento (com IA)
 
-A revisão final foi feita com apoio do assistente: auditoria contra o enunciado,
-correção do bug de lotes cancelados em “Meus arremates”, extração da verificação
-de auditoria, testes unitários e de integração, limpeza de artefactos não pedidos
-e pequenos ajustes de acessibilidade/identidade visual. Todas as alterações foram
-executadas e verificadas localmente (`lint`, `build`, testes e smoke tests).
+A revisão final contou com apoio de assistentes de IA na auditoria contra o
+enunciado, correções, testes e documentação. As alterações foram revistas; a
+execução local e o estado atual dos testes são reportados separadamente, pois
+dependem de PostgreSQL e permissões locais.
 
 ### Plano de desenvolvimento
 
@@ -424,7 +495,7 @@ O projeto seguiu um plano estruturado:
 
 ## Deploy
 
-**Aplicação publicada:**
+**Deploy configurado; disponibilidade verificada em 27/10/2026:**
 - Front-end: https://leilao-lemon.vercel.app
 - API: https://leilao-eof8.onrender.com
 - Health check: https://leilao-eof8.onrender.com/health
@@ -442,7 +513,7 @@ O repositório inclui `render.yaml` (Render Blueprint) e
 - Start: `npm run start:deploy` (migra, corre o seed idempotente e arranca a API)
 - Health check: `/health`
 - Variáveis: `DATABASE_URL` (connection string do Neon), `JWT_SECRET`,
-  `HMAC_SECRET` (gerados) e `FRONTEND_URL` (URL do Vercel).
+  `HMAC_SECRET` (gerados), `FRONTEND_URL` (URL do Vercel) e `TZ=UTC`.
 - A variável chama-se **`DATABASE_URL`**, não `DB_DATABASE` ou `DB_HOST`.
 
 **Front-end no Vercel:**
@@ -455,5 +526,8 @@ O repositório inclui `render.yaml` (Render Blueprint) e
   de a criar ou alterar, faça novo deploy.
 - No Render, `FRONTEND_URL` = `https://leilao-lemon.vercel.app` (o backend
   normaliza a origem, por isso pode incluir path ou barra final).
+- O teste ao vivo foi concluído durante esta revisão: o health check respondeu
+  `ok: true` com `dbTime` UTC. O serviço gratuito estava a acordar e a primeira
+  chamada de health check devolveu `503`; repita a chamada após o arranque.
 - O `vite.config.ts` expõe o prefixo `API_` ao browser, por isso não é preciso
   `VITE_API_URL`. Nunca uses este prefixo para segredos.

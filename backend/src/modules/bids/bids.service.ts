@@ -3,10 +3,11 @@ import { AppError } from "../../middleware/error";
 import { computeBidHash, pseudonym } from "./hash";
 import { getLot } from "../lots/lots.service";
 import { getWallet } from "../wallet/wallet.service";
+import { centsToString } from "../../money";
 
 const EXTENSION_MS = 2 * 60 * 1000;
 
-export async function placeBid(lotId: string, bidderId: string, amountCents: number) {
+export async function placeBid(lotId: string, bidderId: string, amountCents: bigint) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -33,13 +34,13 @@ export async function placeBid(lotId: string, bidderId: string, amountCents: num
     if (lot.leader_id === bidderId) throw new AppError(400, "ALREADY_LEADING");
 
     // 4. Valor mínimo
-    const amount = BigInt(amountCents);
+    const amount = amountCents;
     const minCents =
       lot.bid_count === 0
         ? BigInt(lot.start_price_cents)
         : BigInt(lot.current_bid_cents) + BigInt(lot.min_increment_cents);
     if (amount < minCents) {
-      throw new AppError(400, "BID_BELOW_MINIMUM", { minCents: Number(minCents) });
+      throw new AppError(400, "BID_BELOW_MINIMUM", { minCents: centsToString(minCents) });
     }
 
     // 5. Trava as carteiras envolvidas, sempre por ordem de id (evita deadlock)
@@ -54,31 +55,31 @@ export async function placeBid(lotId: string, bidderId: string, amountCents: num
 
     const available = BigInt(mine.total_cents) - BigInt(mine.committed_cents);
     if (amount > available) {
-      throw new AppError(400, "INSUFFICIENT_BALANCE", { availableCents: Number(available) });
+      throw new AppError(400, "INSUFFICIENT_BALANCE", { availableCents: centsToString(available) });
     }
 
     // 6. Devolve o comprometido ao líder anterior e compromete o novo
     if (lot.leader_id) {
       await client.query(
         "UPDATE wallets SET committed_cents = committed_cents - $1 WHERE user_id = $2",
-        [lot.current_bid_cents, lot.leader_id]
+        [String(lot.current_bid_cents), lot.leader_id]
       );
     }
     await client.query(
       "UPDATE wallets SET committed_cents = committed_cents + $1 WHERE user_id = $2",
-      [amountCents, bidderId]
+      [amount.toString(), bidderId]
     );
 
     // 7. Grava o lance, encadeado ao anterior
     const sequence = lot.bid_count + 1;
     const prevHash: string = lot.head_hash;
     const hash = computeBidHash({
-      prevHash, lotId, sequence, bidderId, amountCents, createdAt: now,
+      prevHash, lotId, sequence, bidderId, amountCents: amount, createdAt: now,
     });
     await client.query(
       `INSERT INTO bids (lot_id, bidder_id, sequence, amount_cents, created_at, prev_hash, hash)
        VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [lotId, bidderId, sequence, amountCents, now, prevHash, hash]
+      [lotId, bidderId, sequence, amount.toString(), now, prevHash, hash]
     );
 
     // 8. Atualiza o lote e aplica o anti-sniping, na mesma transação
@@ -89,14 +90,14 @@ export async function placeBid(lotId: string, bidderId: string, amountCents: num
           SET current_bid_cents = $1, leader_id = $2, bid_count = $3,
               head_hash = $4, end_at = $5
         WHERE id = $6`,
-      [amountCents, bidderId, sequence, hash, newEnd, lotId]
+      [amount.toString(), bidderId, sequence, hash, newEnd, lotId]
     );
 
     await client.query("COMMIT");
 
     return {
       sequence,
-      amountCents,
+      amountCents: amount.toString(),
       extended,
       endAt: newEnd,
       lot: await getLot(lotId),
@@ -125,7 +126,7 @@ export async function getRoom(lotId: string, viewerId?: string) {
 
   const bids = rows.map((b) => ({
     sequence: b.sequence,
-    amountCents: Number(b.amount_cents),
+    amountCents: String(b.amount_cents),
     createdAt: b.created_at,
     bidder: pseudonym(b.bidder_id, lotId),
     isMine: viewerId ? b.bidder_id === viewerId : false,

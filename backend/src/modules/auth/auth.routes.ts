@@ -13,12 +13,12 @@ const registerSchema = z.object({
   password: z
     .string()
     .min(8, APP_MESSAGES.auth.invalidPassword)
-    .max(100)
+    .max(100, APP_MESSAGES.auth.maxPassword)
     .regex(/[a-z]/, APP_MESSAGES.auth.passwordLowercase)
     .regex(/[A-Z]/, APP_MESSAGES.auth.passwordUppercase)
     .regex(/[0-9]/, APP_MESSAGES.auth.passwordNumber)
     .regex(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/, APP_MESSAGES.auth.passwordSymbol),
-  role: z.enum(["auctioneer", "bidder"]),
+  role: z.enum(["auctioneer", "bidder"], { error: APP_MESSAGES.validation.invalidRole }),
 });
 
 const loginSchema = z.object({

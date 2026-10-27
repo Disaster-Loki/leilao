@@ -30,6 +30,7 @@ test("API externa: busca protegida e falha isolada da vitrine", async () => {
     });
     assert.equal(offline.status, 503);
     assert.equal(offline.body.error, "EXTERNAL_API_UNAVAILABLE");
+    assert.match(offline.body.message, /temporariamente indisponível/);
 
     const showcase = await request("/lots");
     assert.equal(showcase.status, 200);

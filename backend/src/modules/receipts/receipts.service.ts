@@ -3,6 +3,7 @@ import { AppError } from "../../middleware/error";
 import { pseudonym } from "../bids/hash";
 import { STATUS_SQL } from "../lots/lots.service";
 import { settleDueLots } from "../settlement/settlement.service";
+import { centsToString } from "../../money";
 
 // Comprovante público (link partilhável). Sem dados pessoais: o vencedor é um pseudónimo.
 export async function getReceipt(id: string) {
@@ -21,7 +22,7 @@ export async function getReceipt(id: string) {
     title: r.title,
     artist: r.artist,
     imageUrl: r.image_url,
-    amountCents: Number(r.amount_cents),
+    amountCents: centsToString(r.amount_cents),
     bidCount: r.bid_count,
     winner: pseudonym(r.winner_id, r.lot_id),
     finalHash: r.final_hash,
@@ -56,8 +57,8 @@ export async function listMyBids(userId: string) {
       imageUrl: r.image_url,
       status: r.status as "scheduled" | "live" | "ended",
       endAt: r.end_at,
-      currentBidCents: Number(r.current_bid_cents),
-      myBestCents: Number(r.my_best),
+      currentBidCents: centsToString(r.current_bid_cents),
+      myBestCents: centsToString(r.my_best),
       // live: leading/outbid · ended: won/lost
       result: ended ? (mine ? "won" : "lost") : mine ? "leading" : "outbid",
       receiptId: ended && mine ? r.receipt_id : null,

@@ -147,7 +147,7 @@ async function register(
   return res.body as Session;
 }
 
-async function deposit(session: Session, amountCents: number) {
+async function deposit(session: Session, amountCents: string) {
   const res = await request("/wallet/deposit", {
     method: "POST",
     token: session.token,
@@ -192,8 +192,8 @@ export async function setupTestEnv(): Promise<TestEnv> {
   const auctioneer = await register("leiloeiro@teste.com", "Leiloeiro Teste", "auctioneer");
   const ana = await register("ana@teste.com", "Ana Teste", "bidder");
   const bruno = await register("bruno@teste.com", "Bruno Teste", "bidder");
-  await deposit(ana, 500_000);
-  await deposit(bruno, 500_000);
+  await deposit(ana, "500000");
+  await deposit(bruno, "500000");
 
   env = { auctioneer, ana, bruno };
   return env;
@@ -232,8 +232,8 @@ export function auctionPayload(overrides: Record<string, unknown> = {}) {
   const now = Date.now();
   return {
     externalId: "12345",
-    startPriceCents: 50_000,
-    minIncrementCents: 5_000,
+    startPriceCents: "50000",
+    minIncrementCents: "5000",
     startAt: new Date(now - 60_000).toISOString(),
     endAt: new Date(now + 3_600_000).toISOString(),
     ...overrides,

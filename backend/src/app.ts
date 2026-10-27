@@ -47,6 +47,12 @@ app.get(
   })
 );
 
+app.get("/time", asyncHandler(async (_req, res) => {
+  const { rows } = await pool.query("SELECT clock_timestamp() AS server_now");
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.json({ serverNow: rows[0].server_now });
+}));
+
 app.use("/my", myRouter);
 app.use("/auth", authRouter);
 app.use("/lots", lotsRouter);

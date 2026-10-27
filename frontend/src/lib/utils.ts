@@ -1,12 +1,5 @@
 import type { ApiError } from "../api/client";
-
-// ─── Formatação de dinheiro ───
-export function formatMoney(cents: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(cents / 100);
-}
+import { formatCents } from "./money";
 
 export function getBrowserTimeZoneLabel(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -32,6 +25,20 @@ export function formatTime(iso: string | null | undefined): string {
   }).format(date);
 }
 
+export function formatRelative(iso: string | null | undefined, now = new Date()): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  const seconds = Math.round((date.getTime() - now.getTime()) / 1000);
+  const absSeconds = Math.abs(seconds);
+  const unit = absSeconds < 60 ? "second" : absSeconds < 3600 ? "minute" : absSeconds < 86400 ? "hour" : "day";
+  const divisor = unit === "second" ? 1 : unit === "minute" ? 60 : unit === "hour" ? 3600 : 86400;
+  return new Intl.RelativeTimeFormat("pt-PT", { numeric: "auto" }).format(
+    Math.round(seconds / divisor),
+    unit,
+  );
+}
+
 export function toDatetimeLocalInput(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   const year = date.getFullYear();
@@ -48,18 +55,6 @@ export function fromDatetimeLocalInput(value: string): Date {
   const [year, month, day] = datePart.split("-").map(Number);
   const [hours, minutes] = timePart.split(":").map(Number);
   return new Date(year, month - 1, day, hours, minutes);
-}
-
-export function parseMoney(input: string): number | null {
-  const s = input.trim().replace(/\./g, "").replace(",", ".");
-  if (!/^\d+(\.\d{1,2})?$/.test(s)) return null;
-  const [int, dec = ""] = s.split(".");
-  const cents = Number(int) * 100 + Number((dec + "00").slice(0, 2));
-  return cents > 0 ? cents : null;
-}
-
-export function toInputMoney(cents: number): string {
-  return (cents / 100).toFixed(2).replace(".", ",");
 }
 
 export function formatRemaining(ms: number): string {
@@ -83,13 +78,19 @@ export function errorMessage(e: unknown): string {
 
   switch (err.error) {
     case "BID_BELOW_MINIMUM":
-      return typeof d.minCents === "number"
-        ? `O seu lance está abaixo do mínimo permitido. O valor mínimo é ${formatMoney(d.minCents)}.`
+      return typeof d.minCents === "string"
+        ? `O seu lance está abaixo do mínimo permitido. O valor mínimo é ${formatCents(d.minCents)}.`
         : "O seu lance está abaixo do mínimo permitido.";
     case "INSUFFICIENT_BALANCE":
-      return typeof d.availableCents === "number"
-        ? `Saldo insuficiente. O valor disponível é ${formatMoney(d.availableCents)}.`
+      return typeof d.availableCents === "string"
+        ? `Saldo insuficiente. O valor disponível é ${formatCents(d.availableCents)}.`
         : "Saldo insuficiente.";
+    case "DEPOSIT_BELOW_MINIMUM":
+      return "O depósito está abaixo do valor mínimo permitido.";
+    case "DEPOSIT_ABOVE_MAXIMUM":
+      return "O depósito excede o valor máximo permitido.";
+    case "WALLET_ABOVE_MAXIMUM":
+      return "Este depósito excederia o saldo máximo permitido na carteira.";
     case "ALREADY_LEADING":
       return "Já está a ganhar este lote, não pode cobrir o seu próprio lance.";
     case "LOT_NOT_STARTED":
@@ -133,6 +134,6 @@ export function errorMessage(e: unknown): string {
     case "INVALID_RESPONSE":
       return "O servidor devolveu uma resposta inválida. Verifique a configuração da API.";
     default:
-      return "Ocorreu um erro inesperado.";
+      return typeof err.message === "string" ? err.message : "Ocorreu um erro inesperado.";
   }
 }
