@@ -122,7 +122,8 @@ O Compose usa apenas imagens oficiais (`postgres:16-alpine` e `node:22-alpine`);
 não há Dockerfiles no repositório. O back-end instala, compila (`tsc`), aplica as
 migrations pendentes, executa o seed idempotente e arranca com `NODE_ENV=production`
 (`node dist/server.js`). O front-end é compilado (`vite build`) e servido como site
-estático, sem servidor de desenvolvimento.
+estático, sem servidor de desenvolvimento. (confirmar: ajuste esta frase se o seu
+compose tiver um serviço `migrate` separado.)
 
 Os dados permanecem no volume `pgdata` entre arranques. Para apagar a base local e
 começar de novo, use `docker compose down -v`. O PostgreSQL fica exposto no host em
@@ -654,6 +655,71 @@ simultâneo não cause um falso alarme.
   execuções anteriores do seed.
 - O lote do seed termina ao fim de algumas horas. Se estiver encerrado, o seed
   (executado a cada arranque no deploy) cria um novo lote ao vivo.
+
+## Uso de IA
+
+Utilizei IA, nomeadamente **Claude (Anthropic)** e **OpenCode Big Pickle**, como ferramentas de apoio técnico ao longo do projeto, sobretudo através de conversas guiadas. Recorri à IA para esclarecer dúvidas, discutir alternativas de arquitetura, consultar boas práticas e rever decisões técnicas. A implementação, as decisões finais, os testes e a validação da aplicação foram da minha responsabilidade.
+
+### Onde e como utilizei a IA
+
+**Planeamento e arquitetura**
+
+Utilizei o Claude para esclarecer os requisitos do enunciado e discutir alternativas de arquitetura, tecnologias e organização do projeto, incluindo Express em vez de NestJS, monorepo, UUID, PostgreSQL, polling e opções de deploy. As decisões finais foram tomadas por mim, tendo em conta os requisitos e os objetivos da aplicação.
+
+**Back-end**
+
+Recorri à IA para esclarecer dúvidas e consultar boas práticas relacionadas com a organização do código, autenticação com JWT e bcrypt, gestão da carteira e do saldo comprometido, integração com a API externa e criação de snapshots dos lotes.
+
+Também consultei sugestões relacionadas com a segurança das operações de licitação, o controlo de concorrência com `SELECT ... FOR UPDATE`, o mecanismo anti-sniping, a liquidação idempotente, a geração de comprovativos e a auditoria através de uma cadeia de hashes HMAC.
+
+A implementação do back-end, incluindo as migrations, a lógica de negócio, os testes e as correções, foi realizada por mim. Analisei as sugestões recebidas e questionei as que não correspondiam aos requisitos do enunciado, nomeadamente as relacionadas com as restrições aplicáveis aos depósitos dos licitantes.
+
+**Testes**
+
+Desenvolvi e executei testes para verificar o funcionamento da aplicação, incluindo cenários de concorrência, operações de licitação e integridade do histórico. Utilizei a IA como apoio para esclarecer dúvidas e avaliar abordagens de teste. A validação foi realizada por mim, através da execução dos testes e da análise dos resultados.
+
+**Front-end**
+
+Utilizei o Claude e o OpenCode Big Pickle como ferramentas de apoio para esclarecer dúvidas e avaliar boas práticas na estruturação dos componentes React e na organização dos estilos CSS, incluindo o tema claro/escuro e as diferentes páginas da aplicação: vitrine de lotes, sala de licitação, carteira, painel de gestão, auditoria e comprovativo.
+
+A lógica de interação com o servidor, incluindo o polling, a contagem decrescente sincronizada com o relógio do servidor e a deteção de prorrogações dos lotes, foi analisada, revista e ajustada por mim.
+
+**Docker, deploy e documentação**
+
+Recorri à IA para esclarecer dúvidas relacionadas com o Docker Compose, a configuração do ambiente, o deploy e a elaboração do README. A configuração, as correções e a validação do funcionamento da aplicação no ambiente de deploy foram realizadas por mim.
+
+### O que revi, questionei e ajustei
+
+Ao longo do desenvolvimento, procurei garantir que as soluções adotadas respeitavam os requisitos funcionais e técnicos do projeto. Em particular:
+
+- Questionei sugestões que não cumpriam o enunciado e confirmei as regras de negócio antes de aceitar alterações.
+- Resolvi problemas do ambiente de desenvolvimento, incluindo a autenticação do PostgreSQL, as variáveis de ambiente (`.env`), as ligações SSL e a configuração do Docker.
+- Ajustei a implementação para utilizar `BigInt` nos valores monetários, evitando problemas de precisão nos cálculos financeiros.
+- Implementei e ajustei a sincronização do relógio com o servidor através do endpoint `/time`.
+- Trabalhei na resolução de imagens através de um proxy e da Wikimedia Commons.
+- Desenvolvi funcionalidades adicionais, incluindo a gestão de conta e a centralização das mensagens da aplicação em português.
+- Executei os testes e validei o fluxo completo da aplicação, incluindo o funcionamento no ambiente de deploy, antes da entrega.
+
+### Plano de desenvolvimento
+
+O desenvolvimento foi organizado nas seguintes etapas:
+
+1. Modelação da base de dados e criação das migrations.
+2. Implementação da autenticação com JWT e bcrypt.
+3. Implementação da carteira e do controlo do saldo comprometido.
+4. Integração com a API externa e criação de snapshots dos lotes.
+5. Gestão dos lotes: criação, apresentação na vitrine e cancelamento.
+6. Implementação das licitações, com controlo de concorrência, cadeia de hashes e mecanismo anti-sniping.
+7. Liquidação dos lotes e geração de comprovativos.
+8. Implementação da auditoria pública.
+9. Desenvolvimento do front-end.
+10. Configuração do Docker Compose, testes, deploy e documentação.
+
+### Responsabilidade e validação
+
+A IA foi utilizada como ferramenta de consulta e apoio técnico, não como substituta do meu trabalho de desenvolvimento. As decisões de arquitetura e de produto, a implementação das funcionalidades, a resolução de problemas, a execução dos testes e a validação final ficaram sob a minha responsabilidade.
+
+As sugestões foram analisadas criticamente e ajustadas sempre que necessário para garantir a conformidade com o enunciado e o correto funcionamento da aplicação.
 
 ## Deploy
 
