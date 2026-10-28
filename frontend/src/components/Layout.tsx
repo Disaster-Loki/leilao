@@ -185,7 +185,7 @@ export default function Layout() {
               aria-label="Abrir menu"
               aria-expanded={menuOpen}
             >
-              {menuOpen ? <Icon name="x" size={17} /> : <Icon name="grid" size={17} />}
+              {menuOpen ? <Icon name="x" size={17} /> : <Icon name="menu" size={17} />}
             </button>
           </div>
         </div>
