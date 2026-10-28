@@ -4,19 +4,19 @@ import { asyncHandler } from "../../middleware/error";
 import { requireAuth, requireRole } from "../../middleware/auth";
 import * as service from "./lots.service";
 import { APP_MESSAGES } from "../../messages";
-import { CENTS_PATTERN, POSTGRES_BIGINT_MAX } from "../../money";
+import { REAIS_PATTERN, POSTGRES_BIGINT_MAX } from "../../money";
 
 export const lotsRouter = Router();
 
 const createSchema = z
   .object({
     externalId: z.string().regex(/^\d+$/, APP_MESSAGES.validation.invalidExternalId),
-    startPriceCents: z.string().regex(CENTS_PATTERN, APP_MESSAGES.validation.centsString)
+    startPriceReais: z.string().regex(REAIS_PATTERN, APP_MESSAGES.validation.reaisString)
       .transform((value) => BigInt(value)).refine((value) => value > 0n, APP_MESSAGES.validation.positive)
-      .refine((value) => value <= POSTGRES_BIGINT_MAX, APP_MESSAGES.validation.maxCents),
-    minIncrementCents: z.string().regex(CENTS_PATTERN, APP_MESSAGES.validation.centsString)
+      .refine((value) => value <= POSTGRES_BIGINT_MAX, APP_MESSAGES.validation.maxReais),
+    minIncrementReais: z.string().regex(REAIS_PATTERN, APP_MESSAGES.validation.reaisString)
       .transform((value) => BigInt(value)).refine((value) => value > 0n, APP_MESSAGES.validation.positive)
-      .refine((value) => value <= POSTGRES_BIGINT_MAX, APP_MESSAGES.validation.maxCents),
+      .refine((value) => value <= POSTGRES_BIGINT_MAX, APP_MESSAGES.validation.maxReais),
     startAt: z.coerce.date(APP_MESSAGES.validation.invalidDateType),
     endAt: z.coerce.date(APP_MESSAGES.validation.invalidDateType),
   })
@@ -25,12 +25,12 @@ const createSchema = z
 
 const updateSchema = z.object({
   externalId: z.string().regex(/^\d+$/, APP_MESSAGES.validation.invalidExternalId).optional(),
-  startPriceCents: z.string().regex(CENTS_PATTERN, APP_MESSAGES.validation.centsString)
+  startPriceReais: z.string().regex(REAIS_PATTERN, APP_MESSAGES.validation.reaisString)
     .transform((value) => BigInt(value)).refine((value) => value > 0n, APP_MESSAGES.validation.positive)
-    .refine((value) => value <= POSTGRES_BIGINT_MAX, APP_MESSAGES.validation.maxCents).optional(),
-  minIncrementCents: z.string().regex(CENTS_PATTERN, APP_MESSAGES.validation.centsString)
+    .refine((value) => value <= POSTGRES_BIGINT_MAX, APP_MESSAGES.validation.maxReais).optional(),
+  minIncrementReais: z.string().regex(REAIS_PATTERN, APP_MESSAGES.validation.reaisString)
     .transform((value) => BigInt(value)).refine((value) => value > 0n, APP_MESSAGES.validation.positive)
-    .refine((value) => value <= POSTGRES_BIGINT_MAX, APP_MESSAGES.validation.maxCents).optional(),
+    .refine((value) => value <= POSTGRES_BIGINT_MAX, APP_MESSAGES.validation.maxReais).optional(),
   startAt: z.coerce.date(APP_MESSAGES.validation.invalidDateType).optional(),
   endAt: z.coerce.date(APP_MESSAGES.validation.invalidDateType).optional(),
 }).refine((input) => Object.values(input).some((value) => value !== undefined), {

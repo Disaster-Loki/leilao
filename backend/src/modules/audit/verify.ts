@@ -3,7 +3,7 @@ import { computeBidHash, GENESIS } from "../bids/hash";
 export interface AuditBidRow {
   bidder_id: string;
   sequence: number;
-  amount_cents: string | number;
+  amount_reais: string | number;
   created_at: Date;
   prev_hash: string;
   hash: string;
@@ -12,18 +12,18 @@ export interface AuditBidRow {
 export interface AuditLotRow {
   head_hash: string;
   bid_count: number;
-  current_bid_cents: string | number | null;
+  current_bid_reais: string | number | null;
   leader_id: string | null;
   settled_at: Date | null;
 }
 
 export interface AuditReceiptRow {
   final_hash: string;
-  amount_cents: string | number;
+  amount_reais: string | number;
 }
 
 export interface AuditSaleRow {
-  amount_cents: string | number;
+  amount_reais: string | number;
 }
 
 export interface AuditIssue {
@@ -56,7 +56,7 @@ export function verifyBidChain(input: {
       lotId,
       sequence: b.sequence,
       bidderId: b.bidder_id,
-      amountCents: BigInt(b.amount_cents),
+      amountReais: BigInt(b.amount_reais),
       createdAt: b.created_at,
     });
     if (expected !== b.hash) issues.push({ sequence: b.sequence, code: "HASH_MISMATCH" });
@@ -69,7 +69,7 @@ export function verifyBidChain(input: {
   if (prev !== lot.head_hash) issues.push({ sequence: null, code: "HEAD_HASH_MISMATCH" });
   if (bids.length !== lot.bid_count) issues.push({ sequence: null, code: "BID_COUNT_MISMATCH" });
   if (last) {
-    if (BigInt(last.amount_cents) !== BigInt(lot.current_bid_cents!))
+    if (BigInt(last.amount_reais) !== BigInt(lot.current_bid_reais!))
       issues.push({ sequence: last.sequence, code: "CURRENT_BID_MISMATCH" });
     if (last.bidder_id !== lot.leader_id)
       issues.push({ sequence: last.sequence, code: "LEADER_MISMATCH" });
@@ -82,10 +82,10 @@ export function verifyBidChain(input: {
     } else {
       if (receipt.final_hash !== prev)
         issues.push({ sequence: null, code: "RECEIPT_HASH_MISMATCH" });
-      if (last && BigInt(receipt.amount_cents) !== BigInt(last.amount_cents))
+      if (last && BigInt(receipt.amount_reais) !== BigInt(last.amount_reais))
         issues.push({ sequence: null, code: "RECEIPT_AMOUNT_MISMATCH" });
     }
-    if (!sale || (last && BigInt(sale.amount_cents) !== BigInt(last.amount_cents)))
+    if (!sale || (last && BigInt(sale.amount_reais) !== BigInt(last.amount_reais)))
       issues.push({ sequence: null, code: "SETTLEMENT_MISMATCH" });
   }
 

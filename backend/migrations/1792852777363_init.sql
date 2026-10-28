@@ -15,9 +15,9 @@ CREATE TABLE users (
 
 CREATE TABLE wallets (
   user_id         UUID PRIMARY KEY REFERENCES users(id),
-  total_cents     BIGINT NOT NULL DEFAULT 0 CHECK (total_cents >= 0),
-  committed_cents BIGINT NOT NULL DEFAULT 0 CHECK (committed_cents >= 0),
-  CHECK (committed_cents <= total_cents)
+  total_reais     BIGINT NOT NULL DEFAULT 0 CHECK (total_reais >= 0),
+  committed_reais BIGINT NOT NULL DEFAULT 0 CHECK (committed_reais >= 0),
+  CHECK (committed_reais <= total_reais)
 );
 
 CREATE TABLE lots (
@@ -30,13 +30,13 @@ CREATE TABLE lots (
   medium              TEXT,
   image_url           TEXT,
   attributes          JSONB NOT NULL DEFAULT '{}',
-  start_price_cents   BIGINT NOT NULL CHECK (start_price_cents > 0),
-  min_increment_cents BIGINT NOT NULL CHECK (min_increment_cents > 0),
+  start_price_reais   BIGINT NOT NULL CHECK (start_price_reais > 0),
+  min_increment_reais BIGINT NOT NULL CHECK (min_increment_reais > 0),
   start_at            TIMESTAMPTZ NOT NULL,
   end_at              TIMESTAMPTZ NOT NULL,
   cancelled_at        TIMESTAMPTZ,
   settled_at          TIMESTAMPTZ,
-  current_bid_cents   BIGINT,
+  current_bid_reais   BIGINT,
   leader_id           UUID REFERENCES users(id),
   bid_count           INTEGER NOT NULL DEFAULT 0,
   head_hash           TEXT NOT NULL DEFAULT 'GENESIS',
@@ -51,7 +51,7 @@ CREATE TABLE bids (
   lot_id       UUID NOT NULL REFERENCES lots(id),
   bidder_id    UUID NOT NULL REFERENCES users(id),
   sequence     INTEGER NOT NULL CHECK (sequence > 0),
-  amount_cents BIGINT NOT NULL CHECK (amount_cents > 0),
+  amount_reais BIGINT NOT NULL CHECK (amount_reais > 0),
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   prev_hash    TEXT NOT NULL,
   hash         TEXT NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE receipts (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   lot_id       UUID NOT NULL UNIQUE REFERENCES lots(id),
   winner_id    UUID NOT NULL REFERENCES users(id),
-  amount_cents BIGINT NOT NULL CHECK (amount_cents > 0),
+  amount_reais BIGINT NOT NULL CHECK (amount_reais > 0),
   final_hash   TEXT NOT NULL,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -73,7 +73,7 @@ CREATE TABLE wallet_transactions (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id      UUID NOT NULL REFERENCES users(id),
   type         wallet_tx_type NOT NULL,
-  amount_cents BIGINT NOT NULL,
+  amount_reais BIGINT NOT NULL,
   lot_id       UUID REFERENCES lots(id),
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );

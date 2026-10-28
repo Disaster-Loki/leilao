@@ -30,13 +30,13 @@ const users = [
     email: "ana@leilao.com",
     name: "Ana Licitante",
     role: "bidder",
-    deposit: 500_000n,
+    deposit: 5_000n,
   },
   {
     email: "bruno@leilao.com",
     name: "Bruno Licitante",
     role: "bidder",
-    deposit: 500_000n,
+    deposit: 5_000n,
   },
 ] as const;
 
@@ -61,7 +61,7 @@ async function seed() {
 
       // Garante que a carteira existe
       await client.query(
-        `INSERT INTO wallets (user_id, total_cents)
+        `INSERT INTO wallets (user_id, total_reais)
          VALUES ($1, $2)
          ON CONFLICT (user_id) DO NOTHING`,
         [rows[0].id, u.deposit.toString()]
@@ -69,7 +69,7 @@ async function seed() {
       if (u.deposit > 0) {
         // Só regista o depósito se a carteira acabou de ser criada
         await client.query(
-          `INSERT INTO wallet_transactions (user_id, type, amount_cents)
+          `INSERT INTO wallet_transactions (user_id, type, amount_reais)
            SELECT $1, 'deposit', $2
            WHERE NOT EXISTS (
              SELECT 1 FROM wallet_transactions
@@ -117,7 +117,7 @@ async function seed() {
       const { rows: lotRows } = await client.query(
         `INSERT INTO lots (
            auctioneer_id, external_id, title, artist, date_display, medium,
-           image_url, attributes, start_price_cents, min_increment_cents,
+           image_url, attributes, start_price_reais, min_increment_reais,
            start_at, end_at
          )
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
@@ -135,8 +135,8 @@ async function seed() {
             dimensions: "89.9 × 94.1 cm (35 3/8 × 37 1/16 in.)",
             medium_display: "Oil on canvas",
           }),
-          "100000", // lance inicial: R$ 1.000,00
-          "10000",  // incremento: R$ 100,00
+          "1000", // lance inicial: R$ 1.000
+          "100",  // incremento: R$ 100
           startAt,
           endAt,
         ]
@@ -152,9 +152,9 @@ async function seed() {
 
     if (bidCheck[0].bid_count === 0) {
       const bidsToPlace = [
-        { bidderId: anaId, amountCents: 100_000n },   // R$ 1.000,00 (lance inicial)
-        { bidderId: brunoId, amountCents: 110_000n },  // R$ 1.100,00
-        { bidderId: anaId, amountCents: 120_000n },    // R$ 1.200,00 (Ana está ganhando)
+        { bidderId: anaId, amountReais: 1_000n },   // R$ 1.000 (lance inicial)
+        { bidderId: brunoId, amountReais: 1_100n },  // R$ 1.100
+        { bidderId: anaId, amountReais: 1_200n },    // R$ 1.200 (Ana está ganhando)
       ];
 
       let prevHash = GENESIS;
@@ -170,38 +170,38 @@ async function seed() {
           lotId,
           sequence,
           bidderId: bid.bidderId,
-          amountCents: bid.amountCents,
+          amountReais: bid.amountReais,
           createdAt,
         });
 
         await client.query(
-          `INSERT INTO bids (lot_id, bidder_id, sequence, amount_cents, created_at, prev_hash, hash)
+          `INSERT INTO bids (lot_id, bidder_id, sequence, amount_reais, created_at, prev_hash, hash)
            VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-          [lotId, bid.bidderId, sequence, bid.amountCents.toString(), createdAt, prevHash, hash]
+          [lotId, bid.bidderId, sequence, bid.amountReais.toString(), createdAt, prevHash, hash]
         );
 
         // Devolve comprometido ao líder anterior
         if (leaderId) {
           await client.query(
-            "UPDATE wallets SET committed_cents = committed_cents - $1 WHERE user_id = $2",
+            "UPDATE wallets SET committed_reais = committed_reais - $1 WHERE user_id = $2",
             [lastAmount.toString(), leaderId]
           );
         }
         // Compromete o novo
         await client.query(
-          "UPDATE wallets SET committed_cents = committed_cents + $1 WHERE user_id = $2",
-          [bid.amountCents.toString(), bid.bidderId]
+          "UPDATE wallets SET committed_reais = committed_reais + $1 WHERE user_id = $2",
+          [bid.amountReais.toString(), bid.bidderId]
         );
 
         prevHash = hash;
         leaderId = bid.bidderId;
-        lastAmount = bid.amountCents;
+        lastAmount = bid.amountReais;
       }
 
       // Actualiza o lote com o estado dos lances
       await client.query(
         `UPDATE lots
-         SET bid_count = $1, current_bid_cents = $2, leader_id = $3, head_hash = $4
+         SET bid_count = $1, current_bid_reais = $2, leader_id = $3, head_hash = $4
          WHERE id = $5`,
         [sequence, lastAmount.toString(), leaderId, prevHash, lotId]
       );

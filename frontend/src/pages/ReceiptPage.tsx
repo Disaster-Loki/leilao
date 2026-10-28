@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { errorMessage, formatDateTime, getBrowserTimeZoneLabel } from "../lib/utils";
-import { formatCents } from "../lib/money";
+import { formatReais } from "../lib/money";
 import type { Receipt } from "../types";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
 import Icon from "../components/Icon";
@@ -46,7 +46,7 @@ export default function ReceiptPage() {
           <dd className="winner-name">{receipt.winner}</dd>
 
           <dt>Valor arrematado</dt>
-          <dd className="receipt-amount">{formatCents(receipt.amountCents)}</dd>
+          <dd className="receipt-amount">{formatReais(receipt.amountReais)}</dd>
 
           <dt>Total de lances</dt>
           <dd>{receipt.bidCount}</dd>

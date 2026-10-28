@@ -181,9 +181,9 @@ npm run build   # gera dist/ estático
 | `JWT_SECRET` | Segredo para assinar tokens de login |
 | `HMAC_SECRET` | Segredo da cadeia de hashes da auditoria. Deve ficar fora do banco |
 | `FRONTEND_URL` | Origem permitida no CORS |
-| `MIN_DEPOSIT_CENTS` | Depósito mínimo em centavos (padrão `1`) |
-| `MAX_DEPOSIT_CENTS` | Limite por depósito em centavos (padrão `100000000000`) |
-| `MAX_WALLET_CENTS` | Saldo total máximo por carteira em centavos (padrão BIGINT máximo) |
+| `MIN_DEPOSIT_REAIS` | Depósito mínimo em reais (padrão `1`) |
+| `MAX_DEPOSIT_REAIS` | Limite por depósito em reais (padrão `1000000000`) |
+| `MAX_WALLET_REAIS` | Saldo total máximo por carteira em reais (padrão BIGINT máximo) |
 
 ### frontend/.env
 
@@ -206,7 +206,7 @@ As permissões são verificadas **no servidor** em cada rota (middleware
 
 ## Decisões técnicas
 
-- **Dinheiro em centavos inteiros** (`BIGINT`, campos `*_cents`), nunca `float`,
+- **Dinheiro em reais inteiros** (`BIGINT`, campos `*_reais`), nunca `float`,
   para evitar erros de arredondamento.
 - **IDs em UUID**, para que links públicos (auditoria, comprovante) não sejam
   adivinháveis.
@@ -292,24 +292,22 @@ Não foi necessária migration de data/hora: a migration inicial já criou todas
 as colunas temporais como `TIMESTAMPTZ`. Converter novamente poderia deslocar
 instantes existentes.
 
-## Dinheiro e precisão numérica
+## Reais e precisão numérica
 
-Todos os valores monetários ficam em centavos inteiros em colunas PostgreSQL
+Todos os valores monetários ficam em reais inteiros em colunas PostgreSQL
 `BIGINT`. No backend, cálculos, comparações, incrementos, saldos e liquidação
-usam `BigInt`; a API REST transmite centavos em strings decimais (por exemplo,
-`"12345600"`), porque JSON não serializa `BigInt` e o tipo JavaScript `Number`
-perde precisão acima de $2^{53}-1$. O front converte os textos recebidos para
+usam `BigInt`; a API REST transmite reais em strings de dígitos (por exemplo,
+`"123456"`), porque JSON não serializa `BigInt` e o tipo JavaScript `Number`
+perde precisão acima de $2^{53}-1$. O front lê os textos recebidos como
 `BigInt`, calcula sem ponto flutuante e formata somente para exibição.
 
-`MIN_DEPOSIT_CENTS`, `MAX_DEPOSIT_CENTS` e `MAX_WALLET_CENTS` configuram os
-limites. Por padrão, o depósito máximo é R$ 1.000.000.000,00 e o saldo máximo
-é o BIGINT positivo do PostgreSQL. Os valores são lidos em centavos; erros de
+`MIN_DEPOSIT_REAIS`, `MAX_DEPOSIT_REAIS` e `MAX_WALLET_REAIS` configuram os
+limites. Por padrão, o depósito máximo é R$ 1.000.000.000 e o saldo máximo
+é o BIGINT positivo do PostgreSQL. Os valores são lidos em reais; erros de
 limite devolvem códigos estáveis e mensagem em português.
 
-A cadeia HMAC existente já canonicalizava `amountCents` como texto decimal
-antes de serializar o array. A migração mantém exatamente essa representação;
-assim, hashes já gravados permanecem válidos e novos lances com `BigInt` geram
-os mesmos bytes canónicos.
+A cadeia HMAC canonicaliza `amountReais` como texto antes de serializar o
+array. Novos lances com `BigInt` geram os mesmos bytes canónicos.
 
 ## Mensagens e idioma
 
@@ -363,9 +361,9 @@ sudo -u postgres psql -c "CREATE DATABASE leilao_test OWNER leilao;"
 createdb -h localhost -U leilao leilao_test
 ```
 
-Na revisão de precisão monetária, foram executados com sucesso os testes
-unitários, de integração (PostgreSQL real), de front-end e de migração/seed.
-Execute `npm run test:all` na pasta `backend` e `npm test` na pasta `frontend`.
+Os testes unitários, de integração (PostgreSQL real), de front-end e de
+migração/seed cobrem a precisão monetária. Execute `npm run test:all` na pasta
+`backend` e `npm test` na pasta `frontend`.
 
 O HTTP para `api.artic.edu` e para o Wikimedia Commons é simulado nos testes,
 por isso correm offline e de forma determinística; a base de dados é real.
@@ -437,7 +435,7 @@ simultâneo não cause um falso alarme.
 | Busca e filtro de lotes | ✅ | Pesquisa por título/artista/técnica, filtros por estado e ordenação por fim/preço/data |
 | Cancelamento com estorno automático | ✅ | O leiloeiro cancela lotes ainda não liquidados; o valor comprometido do líder volta a ficar disponível |
 | Docker Compose | ✅ | `docker compose up` sobe PostgreSQL, migrations/seed, API e front-end; os dados persistem no volume |
-| Testes automatizados | ✅ | 31 unitários + 19 de integração no backend (`node:test`, PostgreSQL real e API externa simulada), além de 23 testes do front |
+| Testes automatizados | ✅ | 31 unitários + 19 de integração no backend (`node:test`, PostgreSQL real e API externa simulada), além de 20 testes do front |
 | Dark Mode | ✅ | Toggle no navbar em todas as páginas (incluindo login); preferência guardada em `localStorage` |
 
 ## Limitações e comportamentos conhecidos

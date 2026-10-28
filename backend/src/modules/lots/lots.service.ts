@@ -2,7 +2,7 @@ import { pool } from "../../db/pool";
 import { AppError } from "../../middleware/error";
 import { getArtwork } from "../external/artic.client";
 import { settleDueLots } from "../settlement/settlement.service";
-import { centsToString } from "../../money";
+import { reaisToString } from "../../money";
 
 // Estado calculado pelo relógio do banco (modelo híbrido)
 export const STATUS_SQL = `
@@ -15,8 +15,8 @@ export const STATUS_SQL = `
 
 const PUBLIC_COLUMNS = `
   id, title, artist, date_display, medium, image_url, attributes,
-  start_price_cents, min_increment_cents, start_at, end_at,
-  current_bid_cents, bid_count, settled_at,
+  start_price_reais, min_increment_reais, start_at, end_at,
+  current_bid_reais, bid_count, settled_at,
   ${STATUS_SQL} AS status,
   now() AS server_now`;
 
@@ -29,11 +29,11 @@ function mapLot(r: any) {
     medium: r.medium,
     imageUrl: r.image_url,
     attributes: r.attributes,
-    startPriceCents: centsToString(r.start_price_cents),
-    minIncrementCents: centsToString(r.min_increment_cents),
+    startPriceReais: reaisToString(r.start_price_reais),
+    minIncrementReais: reaisToString(r.min_increment_reais),
     startAt: r.start_at,
     endAt: r.end_at,
-    currentBidCents: r.current_bid_cents === null ? null : centsToString(r.current_bid_cents),
+    currentBidReais: r.current_bid_reais === null ? null : reaisToString(r.current_bid_reais),
     bidCount: r.bid_count,
     settledAt: r.settled_at,
     status: r.status as "scheduled" | "live" | "ended" | "cancelled",
@@ -45,8 +45,8 @@ export async function createLot(
   auctioneerId: string,
   input: {
     externalId: string;
-    startPriceCents: bigint;
-    minIncrementCents: bigint;
+    startPriceReais: bigint;
+    minIncrementReais: bigint;
     startAt: Date;
     endAt: Date;
   }
@@ -57,13 +57,13 @@ export async function createLot(
   const { rows } = await pool.query(
     `INSERT INTO lots
        (auctioneer_id, external_id, title, artist, date_display, medium,
-        image_url, attributes, start_price_cents, min_increment_cents, start_at, end_at)
+        image_url, attributes, start_price_reais, min_increment_reais, start_at, end_at)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
      RETURNING ${PUBLIC_COLUMNS}`,
     [
       auctioneerId, art.externalId, art.title, art.artist, art.dateDisplay, art.medium,
       art.imageUrl, JSON.stringify(art.attributes),
-      input.startPriceCents.toString(), input.minIncrementCents.toString(), input.startAt, input.endAt,
+      input.startPriceReais.toString(), input.minIncrementReais.toString(), input.startAt, input.endAt,
     ]
   );
   return mapLot(rows[0]);
@@ -74,8 +74,8 @@ export async function updateLot(
   auctioneerId: string,
   input: {
     externalId?: string;
-    startPriceCents?: bigint;
-    minIncrementCents?: bigint;
+    startPriceReais?: bigint;
+    minIncrementReais?: bigint;
     startAt?: Date;
     endAt?: Date;
   }
@@ -86,7 +86,7 @@ export async function updateLot(
     await client.query("BEGIN");
     const { rows } = await client.query(
             `SELECT auctioneer_id, external_id, title, artist, date_display, medium,
-              image_url, attributes, start_price_cents, min_increment_cents,
+              image_url, attributes, start_price_reais, min_increment_reais,
               start_at, end_at, bid_count, cancelled_at, settled_at,
               clock_timestamp() AS db_now
        FROM lots WHERE id = $1 FOR UPDATE`,
@@ -107,8 +107,8 @@ export async function updateLot(
     const { rows: updated } = await client.query(
       `UPDATE lots SET
          external_id = $1, title = $2, artist = $3, date_display = $4, medium = $5,
-         image_url = $6, attributes = $7, start_price_cents = $8,
-         min_increment_cents = $9, start_at = $10, end_at = $11
+         image_url = $6, attributes = $7, start_price_reais = $8,
+         min_increment_reais = $9, start_at = $10, end_at = $11
        WHERE id = $12
        RETURNING ${PUBLIC_COLUMNS}`,
       [
@@ -119,8 +119,8 @@ export async function updateLot(
         artwork ? artwork.medium : lot.medium,
         artwork ? artwork.imageUrl : lot.image_url,
         artwork ? JSON.stringify(artwork.attributes) : lot.attributes,
-        input.startPriceCents?.toString() ?? String(lot.start_price_cents),
-        input.minIncrementCents?.toString() ?? String(lot.min_increment_cents),
+        input.startPriceReais?.toString() ?? String(lot.start_price_reais),
+        input.minIncrementReais?.toString() ?? String(lot.min_increment_reais),
         startAt,
         endAt,
         lotId,
@@ -202,10 +202,10 @@ export async function listMine(auctioneerId: string) {
     [auctioneerId]
   );
   const lots = rows.map(mapLot);
-  const totalReceivedCents = lots
-    .filter((l) => l.settledAt && l.currentBidCents)
-    .reduce((sum, l) => sum + BigInt(l.currentBidCents ?? "0"), 0n);
-  return { lots, totalReceivedCents: totalReceivedCents.toString() };
+  const totalReceivedReais = lots
+    .filter((l) => l.settledAt && l.currentBidReais)
+    .reduce((sum, l) => sum + BigInt(l.currentBidReais ?? "0"), 0n);
+  return { lots, totalReceivedReais: totalReceivedReais.toString() };
 }
 
 export async function cancelLot(lotId: string, auctioneerId: string) {
@@ -216,7 +216,7 @@ export async function cancelLot(lotId: string, auctioneerId: string) {
     // Mesmo lock que os lances usam — cancelar e dar lance não se atropelam
     const { rows } = await client.query(
       `SELECT auctioneer_id, bid_count, cancelled_at, settled_at,
-              leader_id, current_bid_cents FROM lots WHERE id = $1 FOR UPDATE`,
+              leader_id, current_bid_reais FROM lots WHERE id = $1 FOR UPDATE`,
       [lotId]
     );
     const lot = rows[0];
@@ -226,10 +226,10 @@ export async function cancelLot(lotId: string, auctioneerId: string) {
     if (lot.settled_at) throw new AppError(409, "LOT_ALREADY_SETTLED");
 
     // Estorno automático: devolve o valor comprometido ao licitante líder
-    if (lot.leader_id && lot.current_bid_cents) {
+    if (lot.leader_id && lot.current_bid_reais) {
       await client.query(
-        "UPDATE wallets SET committed_cents = committed_cents - $1 WHERE user_id = $2",
-        [String(lot.current_bid_cents), lot.leader_id]
+        "UPDATE wallets SET committed_reais = committed_reais - $1 WHERE user_id = $2",
+        [String(lot.current_bid_reais), lot.leader_id]
       );
     }
 

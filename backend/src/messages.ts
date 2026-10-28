@@ -14,8 +14,8 @@ export const APP_MESSAGES = {
   validation: {
     integer: "Informe um valor inteiro.",
     positive: "Informe um valor maior que zero.",
-    maxCents: "O valor excede o máximo permitido.",
-    centsString: "O valor deve ser informado em centavos, usando apenas dígitos.",
+    maxReais: "O valor excede o máximo permitido.",
+    reaisString: "O valor deve ser informado em reais, usando apenas dígitos.",
     futureDate: "A data de término deve estar no futuro.",
     endAfterStart: "A data de término deve ser posterior à data de início.",
     minQuery: "A pesquisa deve ter pelo menos 2 caracteres.",

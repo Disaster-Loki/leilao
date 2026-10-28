@@ -63,7 +63,7 @@ test("permissões: licitante não cria lote e leiloeiro não deposita", async ()
   const depositAttempt = await request("/wallet/deposit", {
     method: "POST",
     token: auctioneer.token,
-    body: { amountCents: "10000" },
+    body: { amountReais: "10000" },
   });
   assert.equal(depositAttempt.status, 403);
   assert.equal(depositAttempt.body.error, "FORBIDDEN");
@@ -72,7 +72,7 @@ test("permissões: licitante não cria lote e leiloeiro não deposita", async ()
   const bidAttempt = await request("/lots/00000000-0000-4000-8000-000000000000/bids", {
     method: "POST",
     token: auctioneer.token,
-    body: { amountCents: "50000" },
+    body: { amountReais: "50000" },
   });
   assert.equal(bidAttempt.status, 403);
   assert.equal(bidAttempt.body.error, "FORBIDDEN");
@@ -84,7 +84,7 @@ test("validação e depósito inválido devolvem mensagens em português", async
   const invalidLot = await request("/lots", {
     method: "POST",
     token: auctioneer.token,
-    body: { ...auctionPayload(), startPriceCents: "inválido" },
+    body: { ...auctionPayload(), startPriceReais: "inválido" },
   });
   assert.equal(invalidLot.status, 400);
   assert.equal(invalidLot.body.error, "VALIDATION_ERROR");
@@ -94,7 +94,7 @@ test("validação e depósito inválido devolvem mensagens em português", async
   const invalidDeposit = await request("/wallet/deposit", {
     method: "POST",
     token: ana.token,
-    body: { amountCents: "0" },
+    body: { amountReais: "0" },
   });
   assert.equal(invalidDeposit.status, 400);
   assert.equal(invalidDeposit.body.error, "DEPOSIT_BELOW_MINIMUM");
@@ -102,30 +102,30 @@ test("validação e depósito inválido devolvem mensagens em português", async
 });
 
 test("depósitos aceitam valores exatos até ao limite BIGINT", async () => {
-  for (const cents of ["1", "10000", "2147483647", "2147483648", "100000000000", "9007199254740993", "9223372036854775807"]) {
+  for (const reais of ["1", "10000", "2147483647", "2147483648", "100000000000", "9007199254740993", "9223372036854775807"]) {
     const account = await request("/auth/register", {
       method: "POST",
-      body: { email: `money-${cents}@teste.com`, name: "Conta Teste", password: PASSWORD, role: "bidder" },
+      body: { email: `money-${reais}@teste.com`, name: "Conta Teste", password: PASSWORD, role: "bidder" },
     });
     assert.equal(account.status, 201);
     const response = await request("/wallet/deposit", {
       method: "POST",
       token: account.body.token,
-      body: { amountCents: cents },
+      body: { amountReais: reais },
     });
-    assert.equal(response.status, 201, `${cents}: ${JSON.stringify(response.body)}`);
-    assert.equal(response.body.totalCents, cents);
-    assert.equal(typeof response.body.totalCents, "string");
+    assert.equal(response.status, 201, `${reais}: ${JSON.stringify(response.body)}`);
+    assert.equal(response.body.totalReais, reais);
+    assert.equal(typeof response.body.totalReais, "string");
   }
 });
 
 test("depósito rejeita number JSON e zeros à esquerda", async () => {
   const { ana } = getTestEnv();
-  for (const amountCents of [2147483648, "01"]) {
+  for (const amountReais of [2147483648, "01"]) {
     const response = await request("/wallet/deposit", {
       method: "POST",
       token: ana.token,
-      body: { amountCents },
+      body: { amountReais },
     });
     assert.equal(response.status, 400);
     assert.equal(response.body.error, "VALIDATION_ERROR");
@@ -138,7 +138,7 @@ test("saldo acima do teto configurado é rejeitado sem erro 500", async () => {
   const response = await request("/wallet/deposit", {
     method: "POST",
     token: ana.token,
-    body: { amountCents: "9223372036854275808" },
+    body: { amountReais: "9223372036854770808" },
   });
   assert.equal(response.status, 400);
   assert.equal(response.body.error, "WALLET_ABOVE_MAXIMUM");

@@ -4,7 +4,7 @@ import { pseudonym } from "../bids/hash";
 import { STATUS_SQL } from "../lots/lots.service";
 import { settleDueLots } from "../settlement/settlement.service";
 import { verifyBidChain } from "./verify";
-import { centsToString } from "../../money";
+import { reaisToString } from "../../money";
 
 export async function auditLot(lotId: string) {
   await settleDueLots();
@@ -17,7 +17,7 @@ export async function auditLot(lotId: string) {
     await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
     lot = (
       await client.query(
-        `SELECT id, title, head_hash, bid_count, current_bid_cents, leader_id,
+        `SELECT id, title, head_hash, bid_count, current_bid_reais, leader_id,
                 settled_at, ${STATUS_SQL} AS status
            FROM lots WHERE id = $1`,
         [lotId]
@@ -27,17 +27,17 @@ export async function auditLot(lotId: string) {
 
     bids = (
       await client.query(
-        `SELECT bidder_id, sequence, amount_cents, created_at, prev_hash, hash
+        `SELECT bidder_id, sequence, amount_reais, created_at, prev_hash, hash
            FROM bids WHERE lot_id = $1 ORDER BY sequence ASC`,
         [lotId]
       )
     ).rows;
     receipt = (
-      await client.query("SELECT final_hash, amount_cents FROM receipts WHERE lot_id = $1", [lotId])
+      await client.query("SELECT final_hash, amount_reais FROM receipts WHERE lot_id = $1", [lotId])
     ).rows[0];
     sale = (
       await client.query(
-        "SELECT amount_cents FROM wallet_transactions WHERE lot_id = $1 AND type = 'sale'",
+        "SELECT amount_reais FROM wallet_transactions WHERE lot_id = $1 AND type = 'sale'",
         [lotId]
       )
     ).rows[0];
@@ -62,7 +62,7 @@ export async function auditLot(lotId: string) {
     headHash: lot.head_hash as string,
     bids: bids.map((b) => ({
       sequence: b.sequence,
-      amountCents: centsToString(b.amount_cents),
+      amountReais: reaisToString(b.amount_reais),
       createdAt: b.created_at,
       bidder: pseudonym(b.bidder_id, lotId),
       prevHash: b.prev_hash,

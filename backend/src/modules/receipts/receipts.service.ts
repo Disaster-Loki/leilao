@@ -3,12 +3,12 @@ import { AppError } from "../../middleware/error";
 import { pseudonym } from "../bids/hash";
 import { STATUS_SQL } from "../lots/lots.service";
 import { settleDueLots } from "../settlement/settlement.service";
-import { centsToString } from "../../money";
+import { reaisToString } from "../../money";
 
 // Comprovante público (link partilhável). Sem dados pessoais: o vencedor é um pseudónimo.
 export async function getReceipt(id: string) {
   const { rows } = await pool.query(
-    `SELECT r.id, r.amount_cents, r.final_hash, r.created_at, r.winner_id,
+    `SELECT r.id, r.amount_reais, r.final_hash, r.created_at, r.winner_id,
             l.id AS lot_id, l.title, l.artist, l.image_url, l.bid_count
        FROM receipts r JOIN lots l ON l.id = r.lot_id
       WHERE r.id = $1`,
@@ -22,7 +22,7 @@ export async function getReceipt(id: string) {
     title: r.title,
     artist: r.artist,
     imageUrl: r.image_url,
-    amountCents: centsToString(r.amount_cents),
+    amountReais: reaisToString(r.amount_reais),
     bidCount: r.bid_count,
     winner: pseudonym(r.winner_id, r.lot_id),
     finalHash: r.final_hash,
@@ -34,10 +34,10 @@ export async function getReceipt(id: string) {
 export async function listMyBids(userId: string) {
   await settleDueLots();
   const { rows } = await pool.query(
-    `SELECT l.id, l.title, l.artist, l.image_url, l.end_at, l.current_bid_cents,
+    `SELECT l.id, l.title, l.artist, l.image_url, l.end_at, l.current_bid_reais,
             l.leader_id, l.bid_count,
             ${STATUS_SQL} AS status,
-            (SELECT max(amount_cents) FROM bids b WHERE b.lot_id = l.id AND b.bidder_id = $1) AS my_best,
+            (SELECT max(amount_reais) FROM bids b WHERE b.lot_id = l.id AND b.bidder_id = $1) AS my_best,
             r.id AS receipt_id
        FROM lots l
        LEFT JOIN receipts r ON r.lot_id = l.id
@@ -57,8 +57,8 @@ export async function listMyBids(userId: string) {
       imageUrl: r.image_url,
       status: r.status as "scheduled" | "live" | "ended",
       endAt: r.end_at,
-      currentBidCents: centsToString(r.current_bid_cents),
-      myBestCents: centsToString(r.my_best),
+      currentBidReais: reaisToString(r.current_bid_reais),
+      myBestReais: reaisToString(r.my_best),
       // live: leading/outbid · ended: won/lost
       result: ended ? (mine ? "won" : "lost") : mine ? "leading" : "outbid",
       receiptId: ended && mine ? r.receipt_id : null,

@@ -110,7 +110,7 @@ export async function deleteMe(id: string, currentPassword: string): Promise<voi
   try {
     await client.query("BEGIN");
     const { rows } = await client.query(
-      `SELECT u.password_hash, w.total_cents, w.committed_cents
+      `SELECT u.password_hash, w.total_reais, w.committed_reais
        FROM users u JOIN wallets w ON w.user_id = u.id
        WHERE u.id = $1 FOR UPDATE OF u, w`,
       [id]
@@ -128,7 +128,7 @@ export async function deleteMe(id: string, currentPassword: string): Promise<voi
           OR EXISTS (SELECT 1 FROM receipts WHERE winner_id = $1) AS has_history`,
       [id]
     );
-    if (history[0].has_history || BigInt(account.total_cents) !== 0n || BigInt(account.committed_cents) !== 0n) {
+    if (history[0].has_history || BigInt(account.total_reais) !== 0n || BigInt(account.committed_reais) !== 0n) {
       throw new AppError(409, "ACCOUNT_HAS_HISTORY");
     }
 

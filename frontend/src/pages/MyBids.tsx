@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { errorMessage, formatDateTime } from "../lib/utils";
-import { formatCents } from "../lib/money";
+import { formatReais } from "../lib/money";
 import type { MyBid } from "../types";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
 import Icon from "../components/Icon";
@@ -61,11 +61,11 @@ export default function MyBids() {
                     {resultLabel[b.result]}
                   </span>
                   <span className="muted">
-                      Meu melhor lance: <strong>{formatCents(b.myBestCents)}</strong>
+                      Meu melhor lance: <strong>{formatReais(b.myBestReais)}</strong>
                   </span>
                   {b.status === "ended" && (
                     <span className="muted">
-                      Lance final: <strong>{formatCents(b.currentBidCents)}</strong>
+                      Lance final: <strong>{formatReais(b.currentBidReais)}</strong>
                     </span>
                   )}
                 </div>

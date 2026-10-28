@@ -22,9 +22,9 @@ services:
         generateValue: true
       - key: FRONTEND_URL
         sync: false
-      - key: MIN_DEPOSIT_CENTS
+      - key: MIN_DEPOSIT_REAIS
         value: "1"
-      - key: MAX_DEPOSIT_CENTS
-        value: "100000000000"
-      - key: MAX_WALLET_CENTS
+      - key: MAX_DEPOSIT_REAIS
+        value: "1000000000"
+      - key: MAX_WALLET_REAIS
         value: "9223372036854775807"

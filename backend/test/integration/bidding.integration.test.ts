@@ -35,7 +35,7 @@ test("lote agendado não aceita lances antes da hora", async () => {
   const bid = await request(`/lots/${lot.id}/bids`, {
     method: "POST",
     token: ana.token,
-    body: { amountCents: "50000" },
+    body: { amountReais: "500" },
   });
   assert.equal(bid.status, 400);
   assert.equal(bid.body.error, "LOT_NOT_STARTED");
@@ -75,28 +75,28 @@ test("lances: mínimo, líder, saldo, superação e histórico pseudónimo", asy
   const tooLowFirst = await request(`/lots/${lot.id}/bids`, {
     method: "POST",
     token: bruno.token,
-    body: { amountCents: "49999" },
+    body: { amountReais: "499" },
   });
   assert.equal(tooLowFirst.status, 400);
   assert.equal(tooLowFirst.body.error, "BID_BELOW_MINIMUM");
   assert.match(tooLowFirst.body.message, /mínimo/);
-  assert.equal(tooLowFirst.body.details.minCents, "50000");
+  assert.equal(tooLowFirst.body.details.minReais, "500");
 
   const first = await request(`/lots/${lot.id}/bids`, {
     method: "POST",
     token: ana.token,
-    body: { amountCents: "50000" },
+    body: { amountReais: "500" },
   });
   assert.equal(first.status, 201);
   assert.equal(first.body.sequence, 1);
   assert.equal(first.body.extended, false);
-  assert.equal(first.body.wallet.committedCents, "50000");
-  assert.equal(first.body.wallet.availableCents, "450000");
+  assert.equal(first.body.wallet.committedReais, "500");
+  assert.equal(first.body.wallet.availableReais, "4500");
 
   const ownBid = await request(`/lots/${lot.id}/bids`, {
     method: "POST",
     token: ana.token,
-    body: { amountCents: "60000" },
+    body: { amountReais: "600" },
   });
   assert.equal(ownBid.status, 400);
   assert.equal(ownBid.body.error, "ALREADY_LEADING");
@@ -105,47 +105,47 @@ test("lances: mínimo, líder, saldo, superação e histórico pseudónimo", asy
   const belowIncrement = await request(`/lots/${lot.id}/bids`, {
     method: "POST",
     token: bruno.token,
-    body: { amountCents: "50000" },
+    body: { amountReais: "500" },
   });
   assert.equal(belowIncrement.status, 400);
   assert.equal(belowIncrement.body.error, "BID_BELOW_MINIMUM");
-  assert.equal(belowIncrement.body.details.minCents, "55000");
+  assert.equal(belowIncrement.body.details.minReais, "550");
 
   const noBalance = await request(`/lots/${lot.id}/bids`, {
     method: "POST",
     token: bruno.token,
-    body: { amountCents: "900000" },
+    body: { amountReais: "9000" },
   });
   assert.equal(noBalance.status, 400);
   assert.equal(noBalance.body.error, "INSUFFICIENT_BALANCE");
   assert.match(noBalance.body.message, /Saldo insuficiente/);
-  assert.equal(noBalance.body.details.availableCents, "500000");
+  assert.equal(noBalance.body.details.availableReais, "5000");
 
   const second = await request(`/lots/${lot.id}/bids`, {
     method: "POST",
     token: bruno.token,
-    body: { amountCents: "55000" },
+    body: { amountReais: "550" },
   });
   assert.equal(second.status, 201);
   assert.equal(second.body.sequence, 2);
-  assert.equal(second.body.wallet.committedCents, "55000");
+  assert.equal(second.body.wallet.committedReais, "550");
 
   const anaWallet = await request("/wallet", { token: ana.token });
   assert.equal(anaWallet.status, 200);
-  assert.equal(anaWallet.body.committedCents, "0");
-  assert.equal(anaWallet.body.availableCents, "500000");
+  assert.equal(anaWallet.body.committedReais, "0");
+  assert.equal(anaWallet.body.availableReais, "5000");
 
   const third = await request(`/lots/${lot.id}/bids`, {
     method: "POST",
     token: ana.token,
-    body: { amountCents: "60000" },
+    body: { amountReais: "600" },
   });
   assert.equal(third.status, 201);
   assert.equal(third.body.sequence, 3);
 
   const room = await request(`/lots/${lot.id}/room`);
   assert.equal(room.status, 200);
-  assert.equal(room.body.lot.currentBidCents, "60000");
+  assert.equal(room.body.lot.currentBidReais, "600");
   assert.equal(room.body.bids.length, 3);
   assert.equal(room.body.myPosition, "none");
   for (const bid of room.body.bids) {
@@ -186,9 +186,9 @@ test("lances: mínimo, líder, saldo, superação e histórico pseudónimo", asy
   );
 
   const refunded = await request("/wallet", { token: ana.token });
-  assert.equal(refunded.body.totalCents, "500000");
-  assert.equal(refunded.body.committedCents, "0");
-  assert.equal(refunded.body.availableCents, "500000");
+  assert.equal(refunded.body.totalReais, "5000");
+  assert.equal(refunded.body.committedReais, "0");
+  assert.equal(refunded.body.availableReais, "5000");
 });
 
 test("mesma obra pode ser publicada novamente (sem regra extra no enunciado)", async () => {
@@ -209,7 +209,7 @@ test("leiloeiro edita os dados de um lote agendado sem lances", async () => {
   const forbidden = await request(`/lots/${lot.id}`, {
     method: "PATCH",
     token: ana.token,
-    body: { startPriceCents: "60000" },
+    body: { startPriceReais: "600" },
   });
   assert.equal(forbidden.status, 403);
 
@@ -218,16 +218,16 @@ test("leiloeiro edita os dados de um lote agendado sem lances", async () => {
     token: auctioneer.token,
     body: {
       externalId: "12346",
-      startPriceCents: "75000",
-      minIncrementCents: "10000",
+      startPriceReais: "750",
+      minIncrementReais: "100",
       startAt: new Date(Date.now() + 90 * 60_000).toISOString(),
       endAt: new Date(Date.now() + 3 * 60 * 60_000).toISOString(),
     },
   });
   assert.equal(updated.status, 200);
   assert.equal(updated.body.title, ARTWORK.title);
-  assert.equal(updated.body.startPriceCents, "75000");
-  assert.equal(updated.body.minIncrementCents, "10000");
+  assert.equal(updated.body.startPriceReais, "750");
+  assert.equal(updated.body.minIncrementReais, "100");
   assert.equal(updated.body.status, "scheduled");
 });
 
@@ -252,14 +252,14 @@ test("lotes com lances não podem ser editados nem eliminados", async () => {
   const bid = await request(`/lots/${lot.id}/bids`, {
     method: "POST",
     token: ana.token,
-    body: { amountCents: "50000" },
+    body: { amountReais: "500" },
   });
   assert.equal(bid.status, 201);
 
   const edit = await request(`/lots/${lot.id}`, {
     method: "PATCH",
     token: auctioneer.token,
-    body: { startPriceCents: "60000" },
+    body: { startPriceReais: "600" },
   });
   assert.equal(edit.status, 409);
   assert.equal(edit.body.error, "LOT_NOT_EDITABLE");
@@ -274,11 +274,11 @@ test("lotes com lances não podem ser editados nem eliminados", async () => {
 test("lances antigos com a representação histórica continuam íntegros", async () => {
   const lot = await createLot();
   const { ana, bruno } = getTestEnv();
-  for (const [session, amountCents] of [[ana, "50000"], [bruno, "55000"]] as const) {
+  for (const [session, amountReais] of [[ana, "500"], [bruno, "550"]] as const) {
     const result = await request(`/lots/${lot.id}/bids`, {
       method: "POST",
       token: session.token,
-      body: { amountCents },
+      body: { amountReais },
     });
     assert.equal(result.status, 201);
   }
@@ -298,12 +298,12 @@ test("lances paralelos no primeiro lugar mantêm saldo e líder consistentes", a
     request(`/lots/${lot.id}/bids`, {
       method: "POST",
       token: ana.token,
-      body: { amountCents: "50000" },
+      body: { amountReais: "500" },
     }),
     request(`/lots/${lot.id}/bids`, {
       method: "POST",
       token: bruno.token,
-      body: { amountCents: "50000" },
+      body: { amountReais: "500" },
     }),
   ]);
 
@@ -313,15 +313,15 @@ test("lances paralelos no primeiro lugar mantêm saldo e líder consistentes", a
 
   const room = await request(`/lots/${lot.id}/room`);
   assert.equal(room.body.bids.length, 1);
-  assert.equal(room.body.lot.currentBidCents, "50000");
+  assert.equal(room.body.lot.currentBidReais, "500");
 
   const wallets = await Promise.all([
     request("/wallet", { token: ana.token }),
     request("/wallet", { token: bruno.token }),
   ]);
-  const initialCommitted = BigInt(anaBefore.body.committedCents) + BigInt(brunoBefore.body.committedCents);
-  const finalCommitted = BigInt(wallets[0].body.committedCents) + BigInt(wallets[1].body.committedCents);
-  assert.equal(finalCommitted - initialCommitted, 50_000n);
+  const initialCommitted = BigInt(anaBefore.body.committedReais) + BigInt(brunoBefore.body.committedReais);
+  const finalCommitted = BigInt(wallets[0].body.committedReais) + BigInt(wallets[1].body.committedReais);
+  assert.equal(finalCommitted - initialCommitted, 500n);
 });
 
 test("anti-sniping: lance nos últimos 2 minutos prorroga o fim", async () => {
@@ -336,7 +336,7 @@ test("anti-sniping: lance nos últimos 2 minutos prorroga o fim", async () => {
   const bid = await request(`/lots/${lot.id}/bids`, {
     method: "POST",
     token: ana.token,
-    body: { amountCents: "50000" },
+    body: { amountReais: "500" },
   });
   assert.equal(bid.status, 201);
   assert.equal(bid.body.extended, true);

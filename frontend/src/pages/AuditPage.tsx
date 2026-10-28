@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { errorMessage, formatDateTime, getBrowserTimeZoneLabel } from "../lib/utils";
-import { formatCents } from "../lib/money";
+import { formatReais } from "../lib/money";
 import type { AuditResult } from "../types";
 import Icon from "../components/Icon";
 
@@ -148,7 +148,7 @@ export default function AuditPage() {
                     <tr key={b.sequence} className={hasIssue ? "row-issue" : ""}>
                       <td className="muted">{b.sequence}</td>
                       <td>{b.bidder}</td>
-                      <td>{formatCents(b.amountCents)}</td>
+                      <td>{formatReais(b.amountReais)}</td>
                       <td className="muted">
                         {formatDateTime(b.createdAt)}
                         <span className="muted"> ({getBrowserTimeZoneLabel()})</span>

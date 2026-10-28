@@ -4,7 +4,7 @@ import { AppError, asyncHandler } from "../../middleware/error";
 import { requireAuth, requireRole } from "../../middleware/auth";
 import * as service from "./wallet.service";
 import { APP_MESSAGES } from "../../messages";
-import { CENTS_PATTERN, POSTGRES_BIGINT_MAX } from "../../money";
+import { REAIS_PATTERN, POSTGRES_BIGINT_MAX } from "../../money";
 import { env } from "../../config/env";
 
 export const walletRouter = Router();
@@ -12,7 +12,7 @@ export const walletRouter = Router();
 walletRouter.use(requireAuth);
 
 const depositSchema = z.object({
-  amountCents: z.string().regex(CENTS_PATTERN, APP_MESSAGES.validation.centsString)
+  amountReais: z.string().regex(REAIS_PATTERN, APP_MESSAGES.validation.reaisString)
     .transform((value) => BigInt(value)),
 });
 
@@ -28,9 +28,9 @@ walletRouter.get(
   "/limits",
   asyncHandler(async (_req, res) => {
     res.json({
-      minDepositCents: env.MIN_DEPOSIT_CENTS.toString(),
-      maxDepositCents: env.MAX_DEPOSIT_CENTS.toString(),
-      maxWalletCents: env.MAX_WALLET_CENTS.toString(),
+      minDepositReais: env.MIN_DEPOSIT_REAIS.toString(),
+      maxDepositReais: env.MAX_DEPOSIT_REAIS.toString(),
+      maxWalletReais: env.MAX_WALLET_REAIS.toString(),
     });
   })
 );
@@ -40,13 +40,13 @@ walletRouter.post(
   "/deposit",
   requireRole("bidder"),
   asyncHandler(async (req, res) => {
-    const { amountCents } = depositSchema.parse(req.body);
-    if (amountCents > POSTGRES_BIGINT_MAX || amountCents > env.MAX_DEPOSIT_CENTS) {
+    const { amountReais } = depositSchema.parse(req.body);
+    if (amountReais > POSTGRES_BIGINT_MAX || amountReais > env.MAX_DEPOSIT_REAIS) {
       throw new AppError(400, "DEPOSIT_ABOVE_MAXIMUM");
     }
-    if (amountCents < env.MIN_DEPOSIT_CENTS) {
+    if (amountReais < env.MIN_DEPOSIT_REAIS) {
       throw new AppError(400, "DEPOSIT_BELOW_MINIMUM");
     }
-    res.status(201).json(await service.deposit(req.user!.id, amountCents));
+    res.status(201).json(await service.deposit(req.user!.id, amountReais));
   })
 );

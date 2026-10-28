@@ -1,5 +1,5 @@
 import type { ApiError } from "../api/client";
-import { formatCents } from "./money";
+import { formatReais } from "./money";
 
 export function getBrowserTimeZoneLabel(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -78,12 +78,12 @@ export function errorMessage(e: unknown): string {
 
   switch (err.error) {
     case "BID_BELOW_MINIMUM":
-      return typeof d.minCents === "string"
-        ? `O seu lance está abaixo do mínimo permitido. O valor mínimo é ${formatCents(d.minCents)}.`
+      return typeof d.minReais === "string"
+        ? `O seu lance está abaixo do mínimo permitido. O valor mínimo é ${formatReais(d.minReais)}.`
         : "O seu lance está abaixo do mínimo permitido.";
     case "INSUFFICIENT_BALANCE":
-      return typeof d.availableCents === "string"
-        ? `Saldo insuficiente. O valor disponível é ${formatCents(d.availableCents)}.`
+      return typeof d.availableReais === "string"
+        ? `Saldo insuficiente. O valor disponível é ${formatReais(d.availableReais)}.`
         : "Saldo insuficiente.";
     case "DEPOSIT_BELOW_MINIMUM":
       return "O depósito está abaixo do valor mínimo permitido.";

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import type { Lot } from "../types";
 import { formatDateTime } from "../lib/utils";
-import { formatCents } from "../lib/money";
+import { formatReais } from "../lib/money";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
 import Countdown from "./Countdown";
 
@@ -19,7 +19,7 @@ export default function LotCard({ lot }: Props) {
     cancelled: "Cancelado",
   };
 
-  const hasBid = lot.currentBidCents !== null;
+  const hasBid = lot.currentBidReais !== null;
 
   return (
     <Link to={`/lots/${lot.id}`} className={`lot-card card status-${lot.status}`}>
@@ -54,7 +54,7 @@ export default function LotCard({ lot }: Props) {
               {hasBid ? "Lance atual" : "Lance inicial"}
             </span>
             <p className="lot-price">
-              {formatCents(hasBid ? lot.currentBidCents! : lot.startPriceCents)}
+              {formatReais(hasBid ? lot.currentBidReais! : lot.startPriceReais)}
             </p>
           </div>
           {lot.status === "live" && (

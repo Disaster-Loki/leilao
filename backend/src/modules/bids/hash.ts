@@ -12,7 +12,7 @@ export function computeBidHash(i: {
   lotId: string;
   sequence: number;
   bidderId: string;
-  amountCents: number | bigint | string;
+  amountReais: number | bigint | string;
   createdAt: Date;
 }) {
   // JSON de um array: formato sem ambiguidade (não dá para "deslocar" campos)
@@ -22,7 +22,7 @@ export function computeBidHash(i: {
       i.lotId,
       i.sequence,
       i.bidderId,
-      String(i.amountCents),
+      String(i.amountReais),
       i.createdAt.toISOString(),
     ])
   );
