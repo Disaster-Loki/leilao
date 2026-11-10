@@ -247,7 +247,7 @@ export default function LotRoom() {
           )}
           {notice && <div className="msg msg-info">{notice}</div>}
 
-          {/* Posição do utilizador */}
+          {/* Posição do usuário */}
           {myPosition === "leading" && live && (
             <div className="msg msg-ok"><Icon name="check" size={15} /> Você está ganhando!</div>
           )}

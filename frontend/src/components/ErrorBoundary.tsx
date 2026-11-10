@@ -28,7 +28,7 @@ export default class ErrorBoundary extends Component<Props, State> {
         <div className="card" style={{ padding: "2rem", marginTop: "2rem" }}>
           <h1>Não foi possível carregar a página</h1>
           <p className="muted" style={{ margin: ".5rem 0 1rem" }}>
-            Verifique a ligação à API e tente novamente.
+            Verifique a conexão com a API e tente novamente.
           </p>
           <details style={{ marginBottom: "1rem" }}>
             <summary className="muted">Detalhes técnicos</summary>

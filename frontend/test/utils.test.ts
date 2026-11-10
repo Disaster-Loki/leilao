@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { formatTime, fromDatetimeLocalInput, toDatetimeLocalInput } from "../src/lib/utils";
+import { errorMessage, formatTime, fromDatetimeLocalInput, toDatetimeLocalInput } from "../src/lib/utils";
 
 const originalTimezone = process.env.TZ;
 const instant = "2026-10-27T13:00:00.000Z";
@@ -32,4 +32,27 @@ for (const [timezone, expectedTime] of [
 test("restaura o fuso do processo após os testes", () => {
   if (originalTimezone === undefined) delete process.env.TZ;
   else process.env.TZ = originalTimezone;
+});
+
+test("usa a mensagem do backend e acrescenta apenas o detalhe do mínimo", () => {
+  const error = {
+    error: "BID_BELOW_MINIMUM",
+    message: "Seu lance está abaixo do mínimo permitido.",
+    details: { minCents: "50000" },
+  };
+  assert.equal(
+    errorMessage(error),
+    "Seu lance está abaixo do mínimo permitido. O valor mínimo é R$ 500,00."
+  );
+});
+
+test("não reescreve mensagens legíveis vindas do backend", () => {
+  assert.equal(
+    errorMessage({ error: "LOT_ENDED", message: "Este leilão já terminou." }),
+    "Este leilão já terminou."
+  );
+});
+
+test("tem fallback para erros de transporte sem mensagem do backend", () => {
+  assert.equal(errorMessage({ error: "NETWORK_ERROR" }), "Sem conexão com o servidor. Tente novamente.");
 });

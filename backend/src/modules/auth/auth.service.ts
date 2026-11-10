@@ -30,7 +30,7 @@ export async function register(input: {
     );
     const user = rows[0];
 
-    // Todo utilizador ganha carteira (o leiloeiro recebe valores de vendas nela)
+    // Todo usuário ganha carteira (o leiloeiro recebe valores de vendas nela)
     await client.query("INSERT INTO wallets (user_id) VALUES ($1)", [user.id]);
 
     await client.query("COMMIT");

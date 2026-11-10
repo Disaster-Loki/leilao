@@ -44,7 +44,7 @@ async function getJson(url: string): Promise<any> {
 }
 
 function commonsQuery(a: any): string | null {
-  // O número de inventário é o identificador mais fiável: os ficheiros do AIC
+  // O número de inventário é o identificador mais fiável: os arquivos do AIC
   // no Wikimedia Commons incluem o accession number no nome.
   const accession = typeof a.main_reference_number === "string"
     ? a.main_reference_number.trim()

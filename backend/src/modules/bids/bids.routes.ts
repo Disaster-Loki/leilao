@@ -27,7 +27,7 @@ bidsRouter.post(
   })
 );
 
-// Sala: pública; com token, diz também a posição do utilizador
+// Sala: pública; com token, diz também a posição do usuário
 bidsRouter.get(
   "/:id/room",
   optionalAuth,

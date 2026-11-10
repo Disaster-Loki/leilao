@@ -185,7 +185,7 @@ export default function AuditPage() {
           </li>
           <li>
             <strong>Comprovante:</strong> Inclui o hash final da cadeia. O vencedor
-            pode guardar o comprovante e comparar com a auditoria futuramente.
+            pode salvar o comprovante e comparar com a auditoria futuramente.
           </li>
           <li>
             <strong>Limitação assumida:</strong> Quem tem acesso ao banco{" "}

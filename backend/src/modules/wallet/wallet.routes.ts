@@ -16,7 +16,7 @@ const depositSchema = z.object({
     .transform((value) => BigInt(value)),
 });
 
-// Leitura: qualquer utilizador autenticado vê a própria carteira
+// Leitura: qualquer usuário autenticado vê a própria carteira
 // (o leiloeiro também tem carteira, onde recebe o valor das vendas)
 walletRouter.get(
   "/",

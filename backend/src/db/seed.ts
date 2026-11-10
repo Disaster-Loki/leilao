@@ -1,5 +1,5 @@
 /**
- * Seed: insere utilizadores de teste, carteiras, um lote ao vivo e lances.
+ * Seed: insere usuárioes de teste, carteiras, um lote ao vivo e lances.
  * O PDF do teste exige: "um leiloeiro, dois clientes e ao menos um lote
  * publicado com lances abertos, para que possamos percorrer o fluxo sem
  * montar tudo do zero."
@@ -48,7 +48,7 @@ async function seed() {
 
     const ids: Record<string, string> = {};
 
-    // ── Utilizadores e carteiras ──────────────────────────────────────────
+    // ── Usuários e carteiras ──────────────────────────────────────────
     for (const u of users) {
       const { rows } = await client.query(
         `INSERT INTO users (email, name, password_hash, role)

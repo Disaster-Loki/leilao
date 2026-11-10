@@ -439,7 +439,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary); }
   }
 }
 
-/* Bidder: três cards na mesma linha em ecrãs grandes */
+/* Bidder: três cards na mesma linha em telas grandes */
 .wallet-page .wallet-stats-bidder .wallet-stats {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -869,7 +869,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary); }
 [data-theme="light"] .hero-orb { opacity: .14; }
 [data-theme="light"] .lot-card:hover { box-shadow: 0 14px 40px rgba(30,41,90,.14); }
 
-/* ─── Login / Registo ─── */
+/* ─── Login / Registro ─── */
 /* .auth-page {
   flex: 1; display: flex; align-items: center; justify-content: center;
   padding: 2rem 1rem;
@@ -1091,7 +1091,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary); }
 
 /* ─── Barra de rolagem normal ─── */
 
-/* ─── Menu móvel: dropdown compacto em ecrãs maiores ─── */
+/* ─── Menu móvel: dropdown compacto em telas maiores ─── */
 .mobile-menu {
   left: auto;
   right: 1rem;
@@ -1229,7 +1229,7 @@ input:focus, select:focus { outline: none; border-color: var(--primary); }
   .win-trophy { animation: none; }
 }
 
-/* Ajustes para o formulário de login e registo */
+/* Ajustes para o formulário de login e registro */
 @media (max-width: 700px) {
   .auth-page {
     align-items: flex-start;

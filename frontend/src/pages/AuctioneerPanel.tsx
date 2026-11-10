@@ -139,7 +139,7 @@ export default function AuctioneerPanel() {
   }
 
   async function deleteLot(lot: Lot) {
-    if (!confirm(`Eliminar o lote "${lot.title}"? Esta ação não pode ser desfeita.`)) return;
+    if (!confirm(`Excluir o lote "${lot.title}"? Esta ação não pode ser desfeita.`)) return;
     setCancelMsg(null);
     try {
       await api(`/lots/${lot.id}`, { method: "DELETE" });
@@ -360,7 +360,7 @@ export default function AuctioneerPanel() {
                           {l.status === "scheduled" && l.bidCount === 0 && (
                             <div className="row-actions">
                               <button className="btn btn-sm btn-ghost" onClick={() => beginEdit(l)}>Editar</button>
-                              <button className="btn btn-sm btn-danger" onClick={() => void deleteLot(l)}>Eliminar</button>
+                              <button className="btn btn-sm btn-danger" onClick={() => void deleteLot(l)}>Excluir</button>
                             </div>
                           )}
                           {(l.status === "scheduled" || l.status === "live") && (
@@ -462,7 +462,7 @@ export default function AuctioneerPanel() {
                   {lotError && <p className="msg msg-err">{lotError}</p>}
                   {lotMsg && <p className="msg msg-ok">{lotMsg}</p>}
                   <button className="btn btn-primary btn-block" disabled={busy}>
-                    {busy ? "A guardar…" : <><Icon name="gavel" size={16} /> {editingLot ? "Guardar alterações" : "Publicar lote"}</>}
+                    {busy ? "Salvando…" : <><Icon name="gavel" size={16} /> {editingLot ? "Salvar alterações" : "Publicar lote"}</>}
                   </button>
                 </form>
               </>

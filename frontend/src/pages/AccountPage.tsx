@@ -51,10 +51,10 @@ export default function AccountPage() {
 
   async function removeAccount() {
     if (!currentPassword) {
-      setMessage({ ok: false, text: "Informe a senha atual antes de eliminar a conta." });
+      setMessage({ ok: false, text: "Informe a senha atual antes de excluir a conta." });
       return;
     }
-    if (!confirm("Tem a certeza de que pretende eliminar a conta? Esta ação não pode ser desfeita.")) return;
+    if (!confirm("Tem a certeza de que deseja excluir a conta? Esta ação não pode ser desfeita.")) return;
 
     setBusy(true);
     setMessage(null);
@@ -98,17 +98,17 @@ export default function AccountPage() {
           </div>
           {message && <p className={message.ok ? "msg msg-ok" : "msg msg-err"}>{message.text}</p>}
           <button className="btn btn-primary" type="submit" disabled={busy}>
-            <Icon name="check" size={16} /> {busy ? "A guardar…" : "Guardar alterações"}
+            <Icon name="check" size={16} /> {busy ? "Salvando…" : "Salvar alterações"}
           </button>
           <p className="muted" style={{ fontSize: ".88rem" }}>
             A senha atual é pedida para confirmar alterações de segurança.
           </p>
           <hr />
           <div>
-            <h2>Eliminar conta</h2>
+            <h2>Excluir conta</h2>
             <p className="muted">Contas com lotes, lances ou movimentos financeiros mantêm-se para preservar o histórico e a auditoria.</p>
             <button className="btn btn-danger" type="button" onClick={removeAccount} disabled={busy}>
-              Eliminar a minha conta
+              Excluir minha conta
             </button>
           </div>
         </form>

@@ -30,7 +30,7 @@ export async function getReceipt(id: string) {
   };
 }
 
-// "Meus arremates": todos os lotes em que o utilizador deu lance
+// "Meus arremates": todos os lotes em que o usuário deu lance
 export async function listMyBids(userId: string) {
   await settleDueLots();
   const { rows } = await pool.query(

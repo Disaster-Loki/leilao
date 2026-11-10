@@ -161,7 +161,7 @@ export default function Login() {
                 <div>
                   <strong>Lances ao vivo</strong>
                   <span>
-                    Acompanhe as ofertas enquanto o leilão decorre.
+                    Acompanhe as ofertas enquanto o leilão está acontecendo.
                   </span>
                 </div>
               </li>

@@ -20,7 +20,7 @@ export default function Layout() {
   const themeRef = useRef<HTMLDivElement>(null);
   const authRef = useRef<HTMLDivElement>(null);
 
-  // O menu só aparece quando o navbar deixa de caber no ecrã.
+  // O menu só aparece quando o navbar deixa de caber no tela.
   useLayoutEffect(() => {
     const inner = headerInnerRef.current;
     const brand = brandRef.current;

@@ -156,7 +156,7 @@ export default function Showcase() {
         <div className="hero-orb hero-orb-two" />
         <div className="hero-inner">
           <span className="hero-eyebrow">
-            <span className="hero-pulse" /> Leilões a decorrer em tempo real
+            <span className="hero-pulse" /> Leilões em andamento em tempo real
           </span>
           <h1 className="hero-title">
             Descubra arte. <span className="hero-accent">Dê o seu lance.</span>

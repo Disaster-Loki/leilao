@@ -33,7 +33,7 @@ export function formatRelative(iso: string | null | undefined, now = new Date())
   const absSeconds = Math.abs(seconds);
   const unit = absSeconds < 60 ? "second" : absSeconds < 3600 ? "minute" : absSeconds < 86400 ? "hour" : "day";
   const divisor = unit === "second" ? 1 : unit === "minute" ? 60 : unit === "hour" ? 3600 : 86400;
-  return new Intl.RelativeTimeFormat("pt-PT", { numeric: "auto" }).format(
+  return new Intl.RelativeTimeFormat("pt-BR", { numeric: "auto" }).format(
     Math.round(seconds / divisor),
     unit,
   );
@@ -67,7 +67,9 @@ export function formatRemaining(ms: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
-// ─── Tradução de erros da API ───
+// ─── Erros da API ───
+// A mensagem legível é definida no backend. O frontend só acrescenta detalhes
+// úteis (valor mínimo/disponível) e tem um fallback para erros de transporte.
 export function errorMessage(e: unknown): string {
   const err = (e ?? {}) as ApiError;
 
@@ -76,15 +78,26 @@ export function errorMessage(e: unknown): string {
     ? {}
     : ((details ?? {}) as Record<string, unknown>);
 
+  if (err.error === "VALIDATION_ERROR" && Array.isArray(details) && details.length > 0) {
+    const first = details[0] as Record<string, unknown>;
+    if (typeof first?.message === "string") return first.message;
+  }
+
+  if (typeof err.message === "string" && err.message.trim()) {
+    if (err.error === "BID_BELOW_MINIMUM" && typeof d.minCents === "string") {
+      return `${err.message} O valor mínimo é ${formatBRL(d.minCents)}.`;
+    }
+    if (err.error === "INSUFFICIENT_BALANCE" && typeof d.availableCents === "string") {
+      return `${err.message} O valor disponível é ${formatBRL(d.availableCents)}.`;
+    }
+    return err.message;
+  }
+
   switch (err.error) {
     case "BID_BELOW_MINIMUM":
-      return typeof d.minCents === "string"
-        ? `O seu lance está abaixo do mínimo permitido. O valor mínimo é ${formatBRL(d.minCents)}.`
-        : "O seu lance está abaixo do mínimo permitido.";
+      return "Seu lance está abaixo do mínimo permitido.";
     case "INSUFFICIENT_BALANCE":
-      return typeof d.availableCents === "string"
-        ? `Saldo insuficiente. O valor disponível é ${formatBRL(d.availableCents)}.`
-        : "Saldo insuficiente.";
+      return "Saldo insuficiente.";
     case "DEPOSIT_BELOW_MINIMUM":
       return "O depósito está abaixo do valor mínimo permitido.";
     case "DEPOSIT_ABOVE_MAXIMUM":
@@ -94,15 +107,15 @@ export function errorMessage(e: unknown): string {
     case "INVALID_CURRENT_PASSWORD":
       return "A senha atual está incorreta.";
     case "ACCOUNT_HAS_HISTORY":
-      return "A conta tem atividade financeira ou lotes e não pode ser eliminada. Contacte o suporte.";
+      return "A conta tem atividade financeira ou lotes e não pode ser excluída. Entre em contato com o suporte.";
     case "LOT_NOT_EDITABLE":
       return "Este lote já começou, tem lances ou foi encerrado e não pode ser editado.";
     case "LOT_NOT_REMOVABLE":
-      return "Só é possível eliminar lotes sem lances e ainda não liquidados.";
+      return "Só é possível excluir lotes sem lances e ainda não liquidados.";
     case "LOT_DATES_INVALID":
       return "O fim do lote deve ser posterior ao início e ainda estar no futuro.";
     case "ALREADY_LEADING":
-      return "Já está a ganhar este lote, não pode cobrir o seu próprio lance.";
+      return "Você já está ganhando este lote e não pode cobrir o próprio lance.";
     case "LOT_NOT_STARTED":
       return "Este lote ainda não começou.";
     case "LOT_ENDED":
@@ -118,32 +131,27 @@ export function errorMessage(e: unknown): string {
     case "WALLET_NOT_FOUND":
       return "Carteira não encontrada.";
     case "INVALID_CREDENTIALS":
-      return "E-mail ou palavra-passe incorretos.";
+      return "E-mail ou senha incorretos.";
     case "EMAIL_ALREADY_EXISTS":
       return "Já existe uma conta com este e-mail.";
     case "UNAUTHENTICATED":
     case "INVALID_TOKEN":
-      return "Sessão expirada. Inicie sessão novamente.";
+      return "Sessão expirada. Faça login novamente.";
     case "FORBIDDEN":
-      return "Sem permissão para esta ação.";
-    case "VALIDATION_ERROR": {
-      if (Array.isArray(details) && details.length > 0) {
-        const first = details[0] as Record<string, unknown>;
-        if (typeof first?.message === "string") return first.message;
-      }
+      return "Você não tem permissão para esta ação.";
+    case "VALIDATION_ERROR":
       return "Dados inválidos. Verifique os campos.";
-    }
     case "EXTERNAL_API_UNAVAILABLE":
       return "O serviço de busca está temporariamente indisponível. Tente novamente.";
     case "ARTWORK_NOT_FOUND":
       return "Obra não encontrada na API externa.";
     case "NETWORK_ERROR":
-      return "Sem ligação com o servidor. Tente novamente.";
+      return "Sem conexão com o servidor. Tente novamente.";
     case "API_NOT_CONFIGURED":
       return "A URL da API não está configurada neste ambiente.";
     case "INVALID_RESPONSE":
       return "O servidor devolveu uma resposta inválida. Verifique a configuração da API.";
     default:
-      return typeof err.message === "string" ? err.message : "Ocorreu um erro inesperado.";
+      return "Ocorreu um erro inesperado.";
   }
 }
