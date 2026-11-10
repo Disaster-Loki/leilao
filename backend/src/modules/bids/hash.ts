@@ -7,14 +7,27 @@ function hmac(data: string) {
 
 export const GENESIS = "GENESIS";
 
+export type HashVersion = 1 | 2;
+
+export const CURRENT_HASH_VERSION: HashVersion = 2;
+
+// v1: lances anteriores à migração para centavos, cujo hash foi calculado em reais.
+// v2: lances novos, calculados em centavos.
+export function canonicalAmount(amountCents: number | bigint | string, hashVersion: HashVersion) {
+  const cents = BigInt(amountCents);
+  return (hashVersion === 1 ? cents / 100n : cents).toString();
+}
+
 export function computeBidHash(i: {
   prevHash: string;
   lotId: string;
   sequence: number;
   bidderId: string;
-  amountReais: number | bigint | string;
+  amountCents: number | bigint | string;
   createdAt: Date;
+  hashVersion?: HashVersion;
 }) {
+  const hashVersion = i.hashVersion ?? CURRENT_HASH_VERSION;
   // JSON de um array: formato sem ambiguidade (não dá para "deslocar" campos)
   return hmac(
     JSON.stringify([
@@ -22,7 +35,7 @@ export function computeBidHash(i: {
       i.lotId,
       i.sequence,
       i.bidderId,
-      String(i.amountReais),
+      canonicalAmount(i.amountCents, hashVersion),
       i.createdAt.toISOString(),
     ])
   );

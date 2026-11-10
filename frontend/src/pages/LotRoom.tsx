@@ -9,7 +9,7 @@ import {
   formatTime,
   getBrowserTimeZoneLabel,
 } from "../lib/utils";
-import { formatReais, formatReaisInput, parseReais } from "../lib/money";
+import { formatBRL, formatCentsInput, parseCents } from "../lib/money";
 import type { Room, Wallet } from "../types";
 import Countdown from "../components/Countdown";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
@@ -110,16 +110,16 @@ export default function LotRoom() {
   const ended = lot.status === "ended";
   const minNext =
     lot.bidCount === 0
-      ? BigInt(lot.startPriceReais)
-      : BigInt(lot.currentBidReais ?? "0") + BigInt(lot.minIncrementReais);
+      ? BigInt(lot.startPriceCents)
+      : BigInt(lot.currentBidCents ?? "0") + BigInt(lot.minIncrementCents);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setFeedback(null);
-    let reais: bigint;
+    let cents: bigint;
     try {
-      reais = parseReais(amount);
-      if (reais <= 0n) throw new Error("Informe um valor maior que zero.");
+      cents = parseCents(amount);
+      if (cents <= 0n) throw new Error("Informe um valor maior que zero.");
     } catch (error) {
       setFeedback({ ok: false, text: error instanceof Error ? error.message : "Informe um valor válido." });
       return;
@@ -128,9 +128,9 @@ export default function LotRoom() {
     try {
       await api(`/lots/${id}/bids`, {
         method: "POST",
-        body: JSON.stringify({ amountReais: reais.toString() }),
+        body: JSON.stringify({ amountCents: cents.toString() }),
       });
-      setFeedback({ ok: true, text: `Lance de ${formatReais(reais)} aceito!` });
+      setFeedback({ ok: true, text: `Lance de ${formatBRL(cents)} aceito!` });
       setAmount("");
       setRefreshKey((k) => k + 1);
     } catch (err) {
@@ -216,7 +216,7 @@ export default function LotRoom() {
                   : "Lance atual"}
               </p>
               <p className="bid-amount">
-                {formatReais(lot.currentBidReais ?? lot.startPriceReais)}
+                {formatBRL(lot.currentBidCents ?? lot.startPriceCents)}
               </p>
             </div>
             {live && (
@@ -229,7 +229,7 @@ export default function LotRoom() {
 
           <p className="muted bid-meta">
             {lot.bidCount} {lot.bidCount === 1 ? "lance" : "lances"} · incremento
-            mínimo {formatReais(lot.minIncrementReais)}
+            mínimo {formatBRL(lot.minIncrementCents)}
           </p>
 
           {lot.status === "scheduled" && (
@@ -269,7 +269,7 @@ export default function LotRoom() {
             <form onSubmit={submit} className="bid-form">
               {wallet && (
                 <p className="muted wallet-hint">
-                  <Icon name="wallet" size={15} /> Disponível: <strong>{formatReais(wallet.availableReais)}</strong>
+                  <Icon name="wallet" size={15} /> Disponível: <strong>{formatBRL(wallet.availableCents)}</strong>
                 </p>
               )}
               <div className="bid-input-row">
@@ -279,7 +279,7 @@ export default function LotRoom() {
                     id="bid-amount"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    placeholder={formatReaisInput(minNext)}
+                    placeholder={formatCentsInput(minNext)}
                     inputMode="numeric"
                   />
                 </div>
@@ -287,9 +287,9 @@ export default function LotRoom() {
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
-                onClick={() => setAmount(formatReaisInput(minNext))}
+                onClick={() => setAmount(formatCentsInput(minNext))}
               >
-                Mínimo: {formatReais(minNext)}
+                Mínimo: {formatBRL(minNext)}
               </button>
               <button
                 className="btn btn-primary btn-block"
@@ -342,7 +342,7 @@ export default function LotRoom() {
                       {b.bidder}
                       {b.isMine && <span className="you-badge"> (você)</span>}
                     </td>
-                    <td className="bid-value">{formatReais(b.amountReais)}</td>
+                    <td className="bid-value">{formatBRL(b.amountCents)}</td>
                     <td className="muted">
                       {formatTime(b.createdAt)}
                     </td>
@@ -383,7 +383,7 @@ export default function LotRoom() {
             <p className="muted">
               Arremataste <strong>{lot.title}</strong> por{" "}
               <strong className="win-amount">
-                {formatReais(lot.currentBidReais ?? lot.startPriceReais)}
+                {formatBRL(lot.currentBidCents ?? lot.startPriceCents)}
               </strong>
               .
             </p>

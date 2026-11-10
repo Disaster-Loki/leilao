@@ -3,14 +3,14 @@ import type { FormEvent } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../auth/auth-context";
 import { errorMessage } from "../lib/utils";
-import { formatReais, formatReaisInput, parseReais } from "../lib/money";
+import { formatBRL, formatCentsInput, parseCents } from "../lib/money";
 import type { Wallet as WalletData } from "../types";
 import Icon from "../components/Icon";
 
 interface DepositLimits {
-  minDepositReais: string;
-  maxDepositReais: string;
-  maxWalletReais: string;
+  minDepositCents: string;
+  maxDepositCents: string;
+  maxWalletCents: string;
 }
 
 export default function Wallet() {
@@ -34,11 +34,11 @@ export default function Wallet() {
 
   async function deposit(e: FormEvent) {
     e.preventDefault();
-    let reais: bigint;
+    let cents: bigint;
     try {
-      reais = parseReais(amount);
+      cents = parseCents(amount);
     } catch (error) {
-      setMsg({ ok: false, text: error instanceof Error ? error.message : "Informe um valor válido, ex: 500" });
+      setMsg({ ok: false, text: error instanceof Error ? error.message : "Informe um valor válido, ex: 500,00" });
       return;
     }
 
@@ -46,15 +46,15 @@ export default function Wallet() {
       setMsg({ ok: false, text: "Não foi possível carregar os limites da carteira. Tente novamente." });
       return;
     }
-    if (reais < BigInt(depositLimits.minDepositReais)) {
+    if (cents < BigInt(depositLimits.minDepositCents)) {
       setMsg({ ok: false, text: "O depósito está abaixo do valor mínimo permitido." });
       return;
     }
-    if (reais > BigInt(depositLimits.maxDepositReais)) {
-      setMsg({ ok: false, text: `O depósito máximo é ${formatReais(depositLimits.maxDepositReais)}.` });
+    if (cents > BigInt(depositLimits.maxDepositCents)) {
+      setMsg({ ok: false, text: `O depósito máximo é ${formatBRL(depositLimits.maxDepositCents)}.` });
       return;
     }
-    if (BigInt(wallet.totalReais) + reais > BigInt(depositLimits.maxWalletReais)) {
+    if (BigInt(wallet.totalCents) + cents > BigInt(depositLimits.maxWalletCents)) {
       setMsg({ ok: false, text: "Este depósito excederia o saldo máximo permitido na carteira." });
       return;
     }
@@ -63,10 +63,10 @@ export default function Wallet() {
     try {
       const updated = await api<WalletData>("/wallet/deposit", {
         method: "POST",
-        body: JSON.stringify({ amountReais: reais.toString() }),
+        body: JSON.stringify({ amountCents: cents.toString() }),
       });
       setWallet(updated);
-      setMsg({ ok: true, text: `Depósito de ${formatReais(reais)} realizado!` });
+      setMsg({ ok: true, text: `Depósito de ${formatBRL(cents)} realizado!` });
       setAmount("");
     } catch (error) {
       setMsg({ ok: false, text: errorMessage(error) });
@@ -88,18 +88,18 @@ export default function Wallet() {
           <div className="wallet-stats">
             <div className="stat-card card">
               <p className="stat-label muted"><Icon name="wallet" size={13} /> Saldo Total</p>
-              <p className="stat-value">{formatReais(wallet.totalReais)}</p>
+              <p className="stat-value">{formatBRL(wallet.totalCents)}</p>
             </div>
             {user?.role === "bidder" && (
               <div className="stat-card card">
                 <p className="stat-label muted"><Icon name="lock" size={13} /> Comprometido</p>
-                <p className="stat-value">{formatReais(wallet.committedReais)}</p>
+                <p className="stat-value">{formatBRL(wallet.committedCents)}</p>
                 <p className="stat-hint muted">Reservado nos seus lances vencedores</p>
               </div>
             )}
             <div className="stat-card card stat-card-highlight">
               <p className="stat-label muted"><Icon name="check" size={13} /> Disponível</p>
-              <p className="stat-value">{formatReais(wallet.availableReais)}</p>
+              <p className="stat-value">{formatBRL(wallet.availableCents)}</p>
               <p className="stat-hint muted">Pode usar em novos lances</p>
             </div>
           </div>
@@ -118,17 +118,17 @@ export default function Wallet() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 onBlur={() => {
-                  try { setAmount(formatReaisInput(parseReais(amount))); } catch { /* manter para correção */ }
+                  try { setAmount(formatCentsInput(parseCents(amount))); } catch { /* manter para correção */ }
                 }}
-                placeholder="500"
+                placeholder="500,00"
                 inputMode="numeric"
               />
             </div>
-            {depositLimits && <p className="muted">Depósito máximo: {formatReais(depositLimits.maxDepositReais)}.</p>}
+            {depositLimits && <p className="muted">Depósito máximo: {formatBRL(depositLimits.maxDepositCents)}.</p>}
             <div className="quick-amounts">
-              {[500n, 1_000n, 5_000n, 10_000n].map((reais) => (
-                <button key={reais.toString()} type="button" className="chip" onClick={() => setAmount(formatReaisInput(reais))}>
-                  {formatReais(reais)}
+              {[50_000n, 100_000n, 500_000n, 1_000_000n].map((cents) => (
+                <button key={cents.toString()} type="button" className="chip" onClick={() => setAmount(formatCentsInput(cents))}>
+                  {formatBRL(cents)}
                 </button>
               ))}
             </div>

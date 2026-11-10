@@ -18,7 +18,7 @@ const STATUS_OPTIONS: { id: StatusFilter; label: string; icon: IconName }[] = [
 ];
 
 function priceOf(lot: Lot) {
-  return lot.currentBidReais ?? lot.startPriceReais;
+  return lot.currentBidCents ?? lot.startPriceCents;
 }
 
 function sortLots(lots: Lot[], order: SortOrder) {

@@ -4,15 +4,15 @@ import { asyncHandler } from "../../middleware/error";
 import { optionalAuth, requireAuth, requireRole } from "../../middleware/auth";
 import { APP_MESSAGES } from "../../messages";
 import * as service from "./bids.service";
-import { REAIS_PATTERN, POSTGRES_BIGINT_MAX } from "../../money";
+import { CENTS_PATTERN, POSTGRES_BIGINT_MAX } from "../../money";
 
 export const bidsRouter = Router();
 
 const bidSchema = z.object({
-  amountReais: z.string().regex(REAIS_PATTERN, APP_MESSAGES.validation.reaisString)
+  amountCents: z.string().regex(CENTS_PATTERN, APP_MESSAGES.validation.centsString)
     .transform((value) => BigInt(value))
     .refine((value) => value > 0n, APP_MESSAGES.validation.positive)
-    .refine((value) => value <= POSTGRES_BIGINT_MAX, APP_MESSAGES.validation.maxReais),
+    .refine((value) => value <= POSTGRES_BIGINT_MAX, APP_MESSAGES.validation.maxCents),
 });
 
 // Dar lance: só licitante
@@ -22,8 +22,8 @@ bidsRouter.post(
   requireRole("bidder"),
   asyncHandler(async (req, res) => {
     const lotId = z.string().uuid(APP_MESSAGES.validation.invalidUuid).parse(req.params.id);
-    const { amountReais } = bidSchema.parse(req.body);
-    res.status(201).json(await service.placeBid(lotId, req.user!.id, amountReais));
+    const { amountCents } = bidSchema.parse(req.body);
+    res.status(201).json(await service.placeBid(lotId, req.user!.id, amountCents));
   })
 );
 

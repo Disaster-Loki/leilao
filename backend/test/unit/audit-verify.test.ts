@@ -6,11 +6,11 @@ import type { AuditBidRow, AuditLotRow } from "../../src/modules/audit/verify";
 
 const LOT_ID = "1a2b3c4d-0000-4000-8000-000000000001";
 
-function fixture() {
+function fixture(hashVersion: 1 | 2 = 2) {
   const raw = [
-    { bidder_id: "user-1", amount_reais: 100_000, created_at: new Date("2026-01-01T00:00:00.000Z") },
-    { bidder_id: "user-2", amount_reais: 110_000, created_at: new Date("2026-01-01T00:01:00.000Z") },
-    { bidder_id: "user-1", amount_reais: 120_000, created_at: new Date("2026-01-01T00:02:00.000Z") },
+    { bidder_id: "user-1", amount_cents: 100_000, created_at: new Date("2026-01-01T00:00:00.000Z") },
+    { bidder_id: "user-2", amount_cents: 110_000, created_at: new Date("2026-01-01T00:01:00.000Z") },
+    { bidder_id: "user-1", amount_cents: 120_000, created_at: new Date("2026-01-01T00:02:00.000Z") },
   ];
 
   const bids: AuditBidRow[] = [];
@@ -22,10 +22,11 @@ function fixture() {
       lotId: LOT_ID,
       sequence,
       bidderId: r.bidder_id,
-      amountReais: r.amount_reais,
+      amountCents: r.amount_cents,
+      hashVersion,
       createdAt: r.created_at,
     });
-    bids.push({ ...r, sequence, prev_hash: prev, hash });
+    bids.push({ ...r, sequence, hash_version: hashVersion, prev_hash: prev, hash });
     prev = hash;
   });
 
@@ -33,7 +34,7 @@ function fixture() {
   const lot: AuditLotRow = {
     head_hash: prev,
     bid_count: bids.length,
-    current_bid_reais: last.amount_reais,
+    current_bid_cents: last.amount_cents,
     leader_id: last.bidder_id,
     settled_at: null,
   };
@@ -50,9 +51,14 @@ test("cadeia íntegra não reporta problemas", () => {
   assert.deepEqual(verifyBidChain({ lotId: LOT_ID, lot, bids }), []);
 });
 
+test("cadeia legada v1 continua válida depois da migração para centavos", () => {
+  const { bids, lot } = fixture(1);
+  assert.deepEqual(verifyBidChain({ lotId: LOT_ID, lot, bids }), []);
+});
+
 test("alterar o valor de um lance é detetado", () => {
   const { bids, lot } = fixture();
-  bids[1] = { ...bids[1], amount_reais: 110_001 };
+  bids[1] = { ...bids[1], amount_cents: 110_001 };
   const issues = verifyBidChain({ lotId: LOT_ID, lot, bids });
   assert.ok(codes(issues).includes("HASH_MISMATCH"));
 });
@@ -76,7 +82,7 @@ test("remover um lance do meio quebra a sequência", () => {
 
 test("alterar o valor atual do lote é detetado", () => {
   const { bids, lot } = fixture();
-  const issues = verifyBidChain({ lotId: LOT_ID, lot: { ...lot, current_bid_reais: 999_999 }, bids });
+  const issues = verifyBidChain({ lotId: LOT_ID, lot: { ...lot, current_bid_cents: 999_999 }, bids });
   assert.ok(codes(issues).includes("CURRENT_BID_MISMATCH"));
 });
 
@@ -93,8 +99,8 @@ test("comprovante e venda coerentes passam a auditoria", () => {
     lotId: LOT_ID,
     lot: { ...lot, settled_at: new Date() },
     bids,
-    receipt: { final_hash: prev, amount_reais: last.amount_reais },
-    sale: { amount_reais: last.amount_reais },
+    receipt: { final_hash: prev, amount_cents: last.amount_cents },
+    sale: { amount_cents: last.amount_cents },
   });
   assert.deepEqual(issues, []);
 });
@@ -106,8 +112,8 @@ test("hash final do comprovante divergente é detetado", () => {
     lotId: LOT_ID,
     lot: { ...lot, settled_at: new Date() },
     bids,
-    receipt: { final_hash: "adulterado", amount_reais: last.amount_reais },
-    sale: { amount_reais: last.amount_reais },
+    receipt: { final_hash: "adulterado", amount_cents: last.amount_cents },
+    sale: { amount_cents: last.amount_cents },
   });
   assert.ok(codes(issues).includes("RECEIPT_HASH_MISMATCH"));
 });
@@ -119,8 +125,8 @@ test("valor do comprovante divergente é detetado", () => {
     lotId: LOT_ID,
     lot: { ...lot, settled_at: new Date() },
     bids,
-    receipt: { final_hash: prev, amount_reais: BigInt(last.amount_reais) + 1n },
-    sale: { amount_reais: last.amount_reais },
+    receipt: { final_hash: prev, amount_cents: BigInt(last.amount_cents) + 1n },
+    sale: { amount_cents: last.amount_cents },
   });
   assert.ok(codes(issues).includes("RECEIPT_AMOUNT_MISMATCH"));
 });
@@ -132,8 +138,8 @@ test("movimento financeiro divergente é detetado", () => {
     lotId: LOT_ID,
     lot: { ...lot, settled_at: new Date() },
     bids,
-    receipt: { final_hash: prev, amount_reais: last.amount_reais },
-    sale: { amount_reais: BigInt(last.amount_reais) + 1n },
+    receipt: { final_hash: prev, amount_cents: last.amount_cents },
+    sale: { amount_cents: BigInt(last.amount_cents) + 1n },
   });
   assert.ok(codes(issues).includes("SETTLEMENT_MISMATCH"));
 });

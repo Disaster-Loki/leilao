@@ -1,13 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { computeBidHash, GENESIS, pseudonym } from "../../src/modules/bids/hash";
+import { canonicalAmount, computeBidHash, GENESIS, pseudonym } from "../../src/modules/bids/hash";
 
 const base = {
   prevHash: GENESIS,
   lotId: "lot-1",
   sequence: 1,
   bidderId: "user-1",
-  amountReais: 1_000,
+  amountCents: 100_000,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
 };
 
@@ -15,8 +15,16 @@ test("o hash é determinístico para o mesmo lance", () => {
   assert.equal(computeBidHash(base), computeBidHash({ ...base }));
 });
 
+test("o formato do hash diferencia reais legados de centavos", () => {
+  assert.notEqual(
+    computeBidHash({ ...base, hashVersion: 1 }),
+    computeBidHash({ ...base, hashVersion: 2 })
+  );
+  assert.equal(canonicalAmount(100_050, 1), "1000");
+});
+
 test("alterar o valor invalida o hash", () => {
-  assert.notEqual(computeBidHash(base), computeBidHash({ ...base, amountReais: 1_001 }));
+  assert.notEqual(computeBidHash(base), computeBidHash({ ...base, amountCents: 100_001 }));
 });
 
 test("alterar o licitante invalida o hash", () => {

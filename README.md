@@ -234,9 +234,9 @@ npm run build   # gera dist/ estático
 | `JWT_SECRET` | Segredo para assinar tokens de login |
 | `HMAC_SECRET` | Segredo da cadeia de hashes da auditoria. Deve ficar fora do banco |
 | `FRONTEND_URL` | Origem permitida no CORS |
-| `MIN_DEPOSIT_REAIS` | Depósito mínimo em reais (padrão `1`) |
-| `MAX_DEPOSIT_REAIS` | Limite por depósito em reais (padrão `1000000000`) |
-| `MAX_WALLET_REAIS` | Saldo total máximo por carteira em reais (padrão BIGINT máximo) |
+| `MIN_DEPOSIT_CENTS` | Depósito mínimo em centavos (padrão `100` = R$ 1,00) |
+| `MAX_DEPOSIT_CENTS` | Limite por depósito em centavos (padrão `100000000000` = R$ 1.000.000.000,00) |
+| `MAX_WALLET_CENTS` | Saldo total máximo por carteira em centavos (padrão BIGINT máximo) |
 
 > **Importante:** `HMAC_SECRET` deve ser o mesmo em que o seed foi executado. Se
 > mudar o segredo depois de semear, a auditoria acusa "adulterado" nos lotes antigos.
@@ -485,22 +485,34 @@ Não foi necessária migration de data/hora: a migration inicial já criou todas
 as colunas temporais como `TIMESTAMPTZ`. Converter novamente poderia deslocar
 instantes existentes.
 
-## Reais e precisão numérica
+## Centavos e precisão numérica
 
-Todos os valores monetários ficam em reais inteiros em colunas PostgreSQL
+Todos os valores monetários ficam em centavos inteiros em colunas PostgreSQL
 `BIGINT`. No backend, cálculos, comparações, incrementos, saldos e liquidação
-usam `BigInt`; a API REST transmite reais em strings de dígitos (por exemplo,
-`"123456"`), porque JSON não serializa `BigInt` e o tipo JavaScript `Number`
-perde precisão acima de $2^{53}-1$. O front lê os textos recebidos como
-`BigInt`, calcula sem ponto flutuante e formata somente para exibição.
+usam `BigInt`; a API REST transmite centavos em strings de dígitos (por exemplo,
+`"123456"` = R$ 1.234,56), porque JSON não serializa `BigInt` e o tipo
+JavaScript `Number` perde precisão acima de $2^{53}-1$. O front lê os textos
+recebidos como `BigInt`, calcula sem ponto flutuante e formata somente para
+exibição.
 
-`MIN_DEPOSIT_REAIS`, `MAX_DEPOSIT_REAIS` e `MAX_WALLET_REAIS` configuram os
-limites. Por padrão, o depósito máximo é R$ 1.000.000.000 e o saldo máximo
-é o BIGINT positivo do PostgreSQL. Os valores são lidos em reais; erros de
-limite devolvem códigos estáveis e mensagem em português.
+`MIN_DEPOSIT_CENTS`, `MAX_DEPOSIT_CENTS` e `MAX_WALLET_CENTS` configuram os
+limites. Por padrão, o depósito mínimo é R$ 1,00, o depósito máximo é
+R$ 1.000.000.000,00 e o saldo máximo é o BIGINT positivo do PostgreSQL. Os
+valores são lidos em centavos; erros de limite devolvem códigos estáveis e
+mensagem em português.
 
-A cadeia HMAC canonicaliza `amountReais` como texto antes de serializar o
-array. Novos lances com `BigInt` geram os mesmos bytes canónicos.
+A migration `1792861000000_money-cents.sql` renomeia as colunas `*_reais` para
+`*_cents` e multiplica os valores por 100. A migration anterior
+(`1792860000000_money-reais.sql`) tinha dividido os valores por 100 e descartado
+os centavos; por isso, dados antigos ficam com centavos `00` após esta conversão.
+Não é possível recuperar essa parte fracionária sem um backup anterior.
+
+A cadeia HMAC canonicaliza o valor antes de serializar o array. Lances antigos
+ficam com `hash_version = 1`, que canonicaliza em reais para preservar a cadeia
+e os comprovantes já emitidos. Lances novos usam `hash_version = 2`, que
+canonicaliza em centavos. A auditoria recalcula cada lance com a versão gravada,
+portanto lotes antigos e novos continuam verificáveis sem recalcular hashes com
+o `HMAC_SECRET` dentro de uma migration.
 
 ## Mensagens e idioma
 

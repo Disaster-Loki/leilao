@@ -16,11 +16,11 @@ export interface Lot {
   medium: string | null;
   imageUrl: string | null;
   attributes: Record<string, unknown>;
-  startPriceReais: string;
-  minIncrementReais: string;
+  startPriceCents: string;
+  minIncrementCents: string;
   startAt: string;
   endAt: string;
-  currentBidReais: string | null;
+  currentBidCents: string | null;
   bidCount: number;
   settledAt: string | null;
   status: LotStatus;
@@ -29,7 +29,7 @@ export interface Lot {
 
 export interface Bid {
   sequence: number;
-  amountReais: string;
+  amountCents: string;
   createdAt: string;
   bidder: string;
   isMine: boolean;
@@ -42,9 +42,9 @@ export interface Room {
 }
 
 export interface Wallet {
-  totalReais: string;
-  committedReais: string;
-  availableReais: string;
+  totalCents: string;
+  committedCents: string;
+  availableCents: string;
 }
 
 export interface Showcase {
@@ -69,8 +69,8 @@ export interface MyBid {
   imageUrl: string | null;
   status: "scheduled" | "live" | "ended";
   endAt: string;
-  currentBidReais: string;
-  myBestReais: string;
+  currentBidCents: string;
+  myBestCents: string;
   result: "leading" | "outbid" | "won" | "lost";
   receiptId: string | null;
 }
@@ -81,7 +81,7 @@ export interface Receipt {
   title: string;
   artist: string | null;
   imageUrl: string | null;
-  amountReais: string;
+  amountCents: string;
   bidCount: number;
   winner: string;
   finalHash: string;
@@ -90,7 +90,8 @@ export interface Receipt {
 
 export interface AuditBid {
   sequence: number;
-  amountReais: string;
+  amountCents: string;
+  hashVersion: number;
   createdAt: string;
   bidder: string;
   prevHash: string;

@@ -3,14 +3,14 @@ import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { errorMessage, formatDateTime, fromDatetimeLocalInput, getBrowserTimeZoneLabel, toDatetimeLocalInput } from "../lib/utils";
-import { formatReais, formatReaisInput, parseReais } from "../lib/money";
+import { formatBRL, formatCentsInput, parseCents } from "../lib/money";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
 import Icon from "../components/Icon";
 import type { ArtworkResult, Lot } from "../types";
 
 interface PanelData {
   lots: Lot[];
-  totalReceivedReais: string;
+  totalReceivedCents: string;
 }
 
 export default function AuctioneerPanel() {
@@ -88,8 +88,8 @@ export default function AuctioneerPanel() {
   function beginEdit(lot: Lot) {
     setEditingLot(lot);
     setSelected(null);
-    setStartPrice(formatReaisInput(BigInt(lot.startPriceReais)));
-    setMinIncrement(formatReaisInput(BigInt(lot.minIncrementReais)));
+    setStartPrice(formatCentsInput(BigInt(lot.startPriceCents)));
+    setMinIncrement(formatCentsInput(BigInt(lot.minIncrementCents)));
     setStartAt(toDatetimeLocalInput(new Date(lot.startAt)));
     setEndAt(toDatetimeLocalInput(new Date(lot.endAt)));
     setLotError(null);
@@ -102,12 +102,12 @@ export default function AuctioneerPanel() {
     if (!selected && !editingLot) return;
     setLotError(null);
     setLotMsg(null);
-    let startPriceReais: bigint;
-    let minIncrementReais: bigint;
+    let startPriceCents: bigint;
+    let minIncrementCents: bigint;
     try {
-      startPriceReais = parseReais(startPrice);
-      minIncrementReais = parseReais(minIncrement);
-      if (startPriceReais <= 0n || minIncrementReais <= 0n) {
+      startPriceCents = parseCents(startPrice);
+      minIncrementCents = parseCents(minIncrement);
+      if (startPriceCents <= 0n || minIncrementCents <= 0n) {
         throw new Error("Os valores devem ser maiores que zero.");
       }
     } catch (error) {
@@ -120,8 +120,8 @@ export default function AuctioneerPanel() {
         method: editingLot ? "PATCH" : "POST",
         body: JSON.stringify({
           ...(selected ? { externalId: selected.externalId } : {}),
-          startPriceReais: startPriceReais.toString(),
-          minIncrementReais: minIncrementReais.toString(),
+          startPriceCents: startPriceCents.toString(),
+          minIncrementCents: minIncrementCents.toString(),
           startAt: fromDatetimeLocalInput(startAt).toISOString(),
           endAt: fromDatetimeLocalInput(endAt).toISOString(),
         }),
@@ -208,7 +208,7 @@ export default function AuctioneerPanel() {
           <div className="stat-mini card">
             <span className="stat-mini-icon"><Icon name="wallet" size={17} /></span>
             <div>
-              <strong className="ok-text">{formatReais(data.totalReceivedReais)}</strong>
+              <strong className="ok-text">{formatBRL(data.totalReceivedCents)}</strong>
               <span>recebido ({endedCount} encerrados)</span>
             </div>
           </div>
@@ -351,8 +351,8 @@ export default function AuctioneerPanel() {
                         <td className="muted">{formatDateTime(l.startAt)} <span className="muted">({getBrowserTimeZoneLabel()})</span></td>
                         <td className="muted">{formatDateTime(l.endAt)} <span className="muted">({getBrowserTimeZoneLabel()})</span></td>
                         <td>
-                          {l.currentBidReais !== null
-                            ? <strong>{formatReais(l.currentBidReais)}</strong>
+                          {l.currentBidCents !== null
+                            ? <strong>{formatBRL(l.currentBidCents)}</strong>
                             : <span className="muted">—</span>}
                         </td>
                         <td className="muted">{l.bidCount}</td>
