@@ -8,6 +8,7 @@ import {
   setupTestEnv,
   teardownTestEnv,
 } from "./helpers";
+import { settleDueLots } from "../../src/modules/settlement/settlement.job";
 
 before(setupTestEnv);
 after(teardownTestEnv);
@@ -27,9 +28,7 @@ test("liquidação: débito, crédito, comprovante público e auditoria", async 
     lot.id,
   ]);
 
-  // A leitura da vitrine dispara a liquidação preguiçosa.
-  const showcase = await request("/lots");
-  assert.equal(showcase.status, 200);
+  await settleDueLots();
 
   const settled = await request(`/lots/${lot.id}`);
   assert.equal(settled.status, 200);
@@ -100,8 +99,7 @@ test("lote sem lances fecha sem vencedor e sem comprovante", async () => {
     lot.id,
   ]);
 
-  const showcase = await request("/lots");
-  assert.equal(showcase.status, 200);
+  await settleDueLots();
 
   const settled = await request(`/lots/${lot.id}`);
   assert.equal(settled.status, 200);
@@ -131,8 +129,7 @@ test("auditoria deteta alteração direta no banco", async () => {
   await pool.query("UPDATE lots SET end_at = now() - interval '1 second' WHERE id = $1", [
     lot.id,
   ]);
-  const showcase = await request("/lots");
-  assert.equal(showcase.status, 200);
+  await settleDueLots();
 
   const beforeTamper = await request(`/audit/${lot.id}`);
   assert.equal(beforeTamper.status, 200);
@@ -186,7 +183,7 @@ test("lance acima de 2^53 liquida e reconcilia o ledger sem perda", async () => 
   assert.equal(bid.body.wallet.committedCents, amountCents);
 
   await pool.query("UPDATE lots SET end_at = now() - interval '1 second' WHERE id = $1", [lot.id]);
-  await request("/lots");
+  await settleDueLots();
   const mine = await request("/my/bids", { token: bidder.token });
   const won = mine.body.find((item: { lotId: string }) => item.lotId === lot.id);
   assert.ok(won);
@@ -213,4 +210,90 @@ test("lance acima de 2^53 liquida e reconcilia o ledger sem perda", async () => 
   const audit = await request(`/audit/${lot.id}`);
   assert.equal(audit.body.valid, true);
   assert.equal(audit.body.bids[0].amountCents, amountCents);
+});
+
+test("leituras não liquidam lotes; só o job escreve", async () => {
+  const { bruno } = getTestEnv();
+  const lot = await createLot();
+
+  const bid = await request(`/lots/${lot.id}/bids`, {
+    method: "POST",
+    token: bruno.token,
+    body: { amountCents: "50000" },
+  });
+  assert.equal(bid.status, 201);
+
+  await pool.query("UPDATE lots SET end_at = now() - interval '1 second' WHERE id = $1", [lot.id]);
+
+  const showcase = await request("/lots");
+  assert.equal(showcase.status, 200);
+  const detail = await request(`/lots/${lot.id}`);
+  assert.equal(detail.body.status, "ended");
+  assert.equal(detail.body.settledAt, null);
+  await request("/my/bids", { token: bruno.token });
+  await request("/wallet", { token: bruno.token });
+
+  const beforeJob = await pool.query("SELECT 1 FROM receipts WHERE lot_id = $1", [lot.id]);
+  assert.equal(beforeJob.rows.length, 0);
+
+  await settleDueLots();
+
+  const afterJob = await request(`/lots/${lot.id}`);
+  assert.ok(afterJob.body.settledAt);
+  const receipt = await pool.query("SELECT 1 FROM receipts WHERE lot_id = $1", [lot.id]);
+  assert.equal(receipt.rows.length, 1);
+});
+
+test("job de liquidação é idempotente e não duplica créditos", async () => {
+  const { auctioneer } = getTestEnv();
+  const account = await request("/auth/register", {
+    method: "POST",
+    body: {
+      email: "idempotente@teste.com",
+      name: "Licitante Idempotente",
+      password: "Leilao@123",
+      role: "bidder",
+    },
+  });
+  const bidder = account.body as { token: string };
+
+  const deposit = await request("/wallet/deposit", {
+    method: "POST",
+    token: bidder.token,
+    body: { amountCents: "500000" },
+  });
+  assert.equal(deposit.status, 201);
+
+  const lot = await createLot();
+  const bid = await request(`/lots/${lot.id}/bids`, {
+    method: "POST",
+    token: bidder.token,
+    body: { amountCents: "50000" },
+  });
+  assert.equal(bid.status, 201);
+
+  await pool.query("UPDATE lots SET end_at = now() - interval '1 second' WHERE id = $1", [lot.id]);
+  const auctioneerBefore = await request("/wallet", { token: auctioneer.token });
+
+  await settleDueLots();
+  await settleDueLots();
+
+  const receipts = await pool.query("SELECT 1 FROM receipts WHERE lot_id = $1", [lot.id]);
+  assert.equal(receipts.rows.length, 1);
+
+  const transactions = await pool.query(
+    "SELECT type, amount_cents FROM wallet_transactions WHERE lot_id = $1 ORDER BY type",
+    [lot.id]
+  );
+  assert.equal(transactions.rows.length, 2);
+
+  const bidderWallet = await request("/wallet", { token: bidder.token });
+  assert.equal(bidderWallet.body.totalCents, "450000");
+  assert.equal(bidderWallet.body.committedCents, "0");
+
+  const auctioneerAfter = await request("/wallet", { token: auctioneer.token });
+  assert.equal(
+    BigInt(auctioneerAfter.body.totalCents) - BigInt(auctioneerBefore.body.totalCents),
+    50000n
+  );
 });

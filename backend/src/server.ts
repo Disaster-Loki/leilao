@@ -2,11 +2,11 @@
 import { app } from "./app";
 import { env } from "./config/env";
 import { pool } from "./db/pool";
-import { settleDueLots } from "./modules/settlement/settlement.service";
+import { startSettlementJob } from "./modules/settlement/settlement.job";
 
 const server = app.listen(env.PORT);
 
-let settlementTimer: ReturnType<typeof setInterval> | undefined;
+let stopSettlementJob: (() => void) | undefined;
 let shuttingDown = false;
 
 // Só mostra a porta depois de o servidor começar a escutar com sucesso.
@@ -18,11 +18,8 @@ server.on("listening", () => {
     console.log(`🌐 URL: http://localhost:${address.port}`);
   }
 
-  // Liquidação periódica.
-  // A liquidação preguiçosa cobre o caso de o servidor ter estado a dormir.
-  settlementTimer = setInterval(() => {
-    settleDueLots().catch(() => undefined);
-  }, 10_000);
+  // Liquidação periódica, fora do caminho de leitura.
+  stopSettlementJob = startSettlementJob();
 });
 
 // Trata erros durante o arranque do servidor.
@@ -39,9 +36,9 @@ server.on("error", (error: NodeJS.ErrnoException) => {
     );
   }
 
-  if (settlementTimer) {
-    clearInterval(settlementTimer);
-    settlementTimer = undefined;
+  if (stopSettlementJob) {
+    stopSettlementJob();
+    stopSettlementJob = undefined;
   }
 
   void pool.end().finally(() => {
@@ -56,9 +53,9 @@ async function shutdown(signal: string) {
 
   console.log(`\n⏳ ${signal} recebido. A encerrar a API...`);
 
-  if (settlementTimer) {
-    clearInterval(settlementTimer);
-    settlementTimer = undefined;
+  if (stopSettlementJob) {
+    stopSettlementJob();
+    stopSettlementJob = undefined;
   }
 
   const forceExit = setTimeout(() => {

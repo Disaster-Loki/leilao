@@ -2,7 +2,6 @@ import { pool } from "../../db/pool";
 import { AppError } from "../../middleware/error";
 import { pseudonym } from "../bids/hash";
 import { STATUS_SQL } from "../lots/lots.service";
-import { settleDueLots } from "../settlement/settlement.service";
 import { centsToString } from "../../money";
 
 // Comprovante público (link partilhável). Sem dados pessoais: o vencedor é um pseudónimo.
@@ -32,7 +31,6 @@ export async function getReceipt(id: string) {
 
 // "Meus arremates": todos os lotes em que o usuário deu lance
 export async function listMyBids(userId: string) {
-  await settleDueLots();
   const { rows } = await pool.query(
     `SELECT l.id, l.title, l.artist, l.image_url, l.end_at, l.current_bid_cents,
             l.leader_id, l.bid_count,

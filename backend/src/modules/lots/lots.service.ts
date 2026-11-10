@@ -1,7 +1,6 @@
 import { pool } from "../../db/pool";
 import { AppError } from "../../middleware/error";
 import { getArtwork } from "../external/artic.client";
-import { settleDueLots } from "../settlement/settlement.service";
 import { centsToString } from "../../money";
 
 // Estado calculado pelo relógio do banco (modelo híbrido)
@@ -165,7 +164,6 @@ export async function deleteLot(lotId: string, auctioneerId: string): Promise<vo
 
 // Vitrine pública: nunca devolve cancelados
 export async function listShowcase(search?: string) {
-  await settleDueLots();
   const params: unknown[] = [];
   let where = "cancelled_at IS NULL";
   if (search) {
@@ -185,7 +183,6 @@ export async function listShowcase(search?: string) {
 }
 
 export async function getLot(id: string) {
-  await settleDueLots();
   const { rows } = await pool.query(
     `SELECT ${PUBLIC_COLUMNS} FROM lots WHERE id = $1 AND cancelled_at IS NULL`,
     [id]
@@ -196,7 +193,6 @@ export async function getLot(id: string) {
 
 // Painel do leiloeiro: os seus lotes (incluindo cancelados) e resultados
 export async function listMine(auctioneerId: string) {
-  await settleDueLots();
   const { rows } = await pool.query(
     `SELECT ${PUBLIC_COLUMNS} FROM lots WHERE auctioneer_id = $1 ORDER BY created_at DESC`,
     [auctioneerId]

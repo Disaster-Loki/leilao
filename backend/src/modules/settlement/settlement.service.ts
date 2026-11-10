@@ -74,13 +74,3 @@ export async function settleLot(lotId: string): Promise<void> {
     client.release();
   }
 }
-
-// Liquida todos os lotes vencidos (usado pelo agendador e pela liquidação preguiçosa)
-export async function settleDueLots(): Promise<void> {
-  const { rows } = await pool.query(
-    `SELECT id FROM lots
-      WHERE settled_at IS NULL AND cancelled_at IS NULL AND end_at <= now()
-      LIMIT 50`
-  );
-  for (const r of rows) await settleLot(r.id);
-}

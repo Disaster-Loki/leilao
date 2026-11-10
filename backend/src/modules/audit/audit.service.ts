@@ -2,12 +2,10 @@ import { pool } from "../../db/pool";
 import { AppError } from "../../middleware/error";
 import { pseudonym } from "../bids/hash";
 import { STATUS_SQL } from "../lots/lots.service";
-import { settleDueLots } from "../settlement/settlement.service";
 import { verifyBidChain } from "./verify";
 import { centsToString } from "../../money";
 
 export async function auditLot(lotId: string) {
-  await settleDueLots();
 
   const client = await pool.connect();
   let lot: any, bids: any[], receipt: any, sale: any;
