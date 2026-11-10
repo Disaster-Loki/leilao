@@ -51,9 +51,8 @@ export default function LotRoom() {
         if (cancelled) return;
 
         const end = new Date(r.lot.endAt).getTime();
-        if (lastEndRef.current !== null && end > lastEndRef.current) {
-          setNotice("Prazo prorrogado +2 min (lance nos últimos 2 minutos).");
-        }
+        const extended = lastEndRef.current !== null && end > lastEndRef.current;
+        setNotice(extended ? "Prazo prorrogado +2 min (lance nos últimos 2 minutos)." : null);
         lastEndRef.current = end;
 
         if (loadedLotIdRef.current !== r.lot.id) {
@@ -61,6 +60,7 @@ export default function LotRoom() {
           lastStatusRef.current = null;
           celebratedRef.current = false;
           setCelebrate(false);
+          setNotice(null);
         }
 
         const previousStatus = lastStatusRef.current;
@@ -98,6 +98,12 @@ export default function LotRoom() {
     };
   }, [id, isBidder, refreshKey]);
 
+  useEffect(() => {
+    if (!feedback?.ok) return;
+    const timer = window.setTimeout(() => setFeedback(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [feedback]);
+
   if (loadError && !room) {
     return <p className="msg msg-err center-msg">{loadError}</p>;
   }
@@ -112,6 +118,48 @@ export default function LotRoom() {
     lot.bidCount === 0
       ? BigInt(lot.startPriceCents)
       : BigInt(lot.currentBidCents ?? "0") + BigInt(lot.minIncrementCents);
+
+  const panelFeedback = (() => {
+    if (feedback) {
+      return <div className={feedback.ok ? "msg msg-ok" : "msg msg-err"}>{feedback.text}</div>;
+    }
+    if (notice) {
+      return <div className="msg msg-info">{notice}</div>;
+    }
+    if (lot.status === "scheduled") {
+      return (
+        <div className="msg msg-info">
+          <Icon name="clock" size={15} /> Começa em {formatDateTime(lot.startAt)}
+          <span className="muted"> ({getBrowserTimeZoneLabel()})</span>
+        </div>
+      );
+    }
+    if (ended) {
+      if (myPosition === "leading") {
+        return (
+          <div className="msg msg-ok">
+            <Icon name="trophy" size={16} /> Você venceu! Veja o comprovante em{" "}
+            <Link to="/my/bids">Meus Arremates</Link>.
+          </div>
+        );
+      }
+      if (myPosition === "outbid") {
+        return <div className="msg msg-err">Você não venceu este lote.</div>;
+      }
+      return (
+        <div className="msg msg-info">
+          {lot.bidCount > 0 ? "Lote encerrado e arrematado." : "Lote encerrado sem lances."}
+        </div>
+      );
+    }
+    if (live && myPosition === "leading") {
+      return <div className="msg msg-ok"><Icon name="check" size={15} /> Você está ganhando!</div>;
+    }
+    if (live && myPosition === "outbid") {
+      return <div className="msg msg-err"><Icon name="x" size={15} /> Você foi superado</div>;
+    }
+    return null;
+  })();
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -232,37 +280,7 @@ export default function LotRoom() {
             mínimo {formatBRL(lot.minIncrementCents)}
           </p>
 
-          {lot.status === "scheduled" && (
-            <div className="msg msg-info">
-              <Icon name="clock" size={15} /> Começa em {formatDateTime(lot.startAt)}
-              <span className="muted"> ({getBrowserTimeZoneLabel()})</span>
-            </div>
-          )}
-          {ended && (
-            <div className="msg msg-info">
-              {lot.bidCount > 0
-                ? "Lote encerrado e arrematado."
-                : "Lote encerrado sem lances."}
-            </div>
-          )}
-          {notice && <div className="msg msg-info">{notice}</div>}
-
-          {/* Posição do usuário */}
-          {myPosition === "leading" && live && (
-            <div className="msg msg-ok"><Icon name="check" size={15} /> Você está ganhando!</div>
-          )}
-          {myPosition === "outbid" && live && (
-            <div className="msg msg-err"><Icon name="x" size={15} /> Você foi superado</div>
-          )}
-          {myPosition === "leading" && ended && (
-            <div className="msg msg-ok">
-              <Icon name="trophy" size={16} /> Você venceu! Veja o comprovante em{" "}
-              <Link to="/my/bids">Meus Arremates</Link>.
-            </div>
-          )}
-          {myPosition === "outbid" && ended && (
-            <div className="msg msg-err">Você não venceu este lote.</div>
-          )}
+          {panelFeedback}
 
           {/* Formulário de lance */}
           {live && isBidder && (
@@ -297,11 +315,6 @@ export default function LotRoom() {
               >
                 {sending ? "Enviando…" : <><Icon name="gavel" size={16} /> Dar lance</>}
               </button>
-              {feedback && (
-                <div className={feedback.ok ? "msg msg-ok" : "msg msg-err"}>
-                  {feedback.text}
-                </div>
-              )}
             </form>
           )}
 

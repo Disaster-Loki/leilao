@@ -6,11 +6,22 @@ import { errorMessage, formatDateTime, fromDatetimeLocalInput, getBrowserTimeZon
 import { formatBRL, formatCentsInput, parseCents } from "../lib/money";
 import { imageSrc, PLACEHOLDER } from "../lib/image";
 import Icon from "../components/Icon";
+import Toast from "../components/Toast";
+import type { ToastMessage } from "../components/Toast";
+import ConfirmDialog from "../components/ConfirmDialog";
 import type { ArtworkResult, Lot } from "../types";
 
 interface PanelData {
   lots: Lot[];
   totalReceivedCents: string;
+}
+
+interface PendingConfirm {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  tone?: "danger" | "primary";
+  action: () => Promise<void>;
 }
 
 export default function AuctioneerPanel() {
@@ -22,9 +33,10 @@ export default function AuctioneerPanel() {
   const [selected, setSelected] = useState<ArtworkResult | null>(null);
   const [editingLot, setEditingLot] = useState<Lot | null>(null);
   const [lotError, setLotError] = useState<string | null>(null);
-  const [lotMsg, setLotMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [cancelMsg, setCancelMsg] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const createPanelRef = useRef<HTMLDivElement>(null);
 
@@ -54,8 +66,10 @@ export default function AuctioneerPanel() {
     }
 
     void tick();
+    const timer = window.setInterval(tick, 5000);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
     };
   }, [refreshKey]);
 
@@ -79,7 +93,7 @@ export default function AuctioneerPanel() {
   function selectArtwork(artwork: ArtworkResult) {
     setSelected(artwork);
     setLotError(null);
-    setLotMsg(null);
+    setToast(null);
     window.setTimeout(() => {
       createPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 60);
@@ -93,7 +107,7 @@ export default function AuctioneerPanel() {
     setStartAt(toDatetimeLocalInput(new Date(lot.startAt)));
     setEndAt(toDatetimeLocalInput(new Date(lot.endAt)));
     setLotError(null);
-    setLotMsg(null);
+    setToast(null);
     createPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -101,7 +115,7 @@ export default function AuctioneerPanel() {
     e.preventDefault();
     if (!selected && !editingLot) return;
     setLotError(null);
-    setLotMsg(null);
+    setToast(null);
     let startPriceCents: bigint;
     let minIncrementCents: bigint;
     try {
@@ -126,7 +140,10 @@ export default function AuctioneerPanel() {
           endAt: fromDatetimeLocalInput(endAt).toISOString(),
         }),
       });
-      setLotMsg(editingLot ? "Lote atualizado com sucesso." : `Lote "${selected!.title}" criado com sucesso!`);
+      setToast({
+        tone: "ok",
+        text: editingLot ? "Lote atualizado com sucesso." : `Lote "${selected!.title}" criado com sucesso!`,
+      });
       setSelected(null);
       setEditingLot(null);
       setResults(null);
@@ -138,30 +155,55 @@ export default function AuctioneerPanel() {
     }
   }
 
-  async function deleteLot(lot: Lot) {
-    if (!confirm(`Excluir o lote "${lot.title}"? Esta ação não pode ser desfeita.`)) return;
-    setCancelMsg(null);
-    try {
-      await api(`/lots/${lot.id}`, { method: "DELETE" });
-      setCancelMsg(`Lote "${lot.title}" eliminado.`);
-      setRefreshKey((key) => key + 1);
-    } catch (error) {
-      setCancelMsg(errorMessage(error));
-    }
+  function deleteLot(lot: Lot) {
+    setPendingConfirm({
+      title: "Excluir lote",
+      description: `Excluir o lote "${lot.title}"? Esta ação não pode ser desfeita.`,
+      confirmLabel: "Excluir",
+      tone: "danger",
+      action: async () => {
+        try {
+          await api(`/lots/${lot.id}`, { method: "DELETE" });
+          setToast({ tone: "ok", text: `Lote "${lot.title}" excluído.` });
+          setRefreshKey((key) => key + 1);
+        } catch (error) {
+          setToast({ tone: "err", text: errorMessage(error) });
+        }
+      },
+    });
   }
 
-  async function cancelLot(lotId: string, title: string, bidCount: number) {
-    const msg = bidCount > 0
-      ? `Cancelar "${title}"?\n\nO lote tem ${bidCount} lance(s). O valor comprometido será devolvido automaticamente ao licitante.`
-      : `Cancelar "${title}"?`;
-    if (!confirm(msg)) return;
-    setCancelMsg(null);
+  function cancelLot(lotId: string, title: string, bidCount: number) {
+    setPendingConfirm({
+      title: "Cancelar lote",
+      description: bidCount > 0
+        ? `Cancelar "${title}"? O lote tem ${bidCount} lance(s). O valor comprometido será devolvido automaticamente ao licitante.`
+        : `Cancelar "${title}"? Esta ação não pode ser desfeita.`,
+      confirmLabel: "Cancelar lote",
+      tone: "danger",
+      action: async () => {
+        try {
+          await api(`/lots/${lotId}/cancel`, { method: "POST" });
+          setToast({
+            tone: "ok",
+            text: `Lote "${title}" cancelado${bidCount > 0 ? " — estorno realizado." : "."}`,
+          });
+          setRefreshKey((k) => k + 1);
+        } catch (err) {
+          setToast({ tone: "err", text: errorMessage(err) });
+        }
+      },
+    });
+  }
+
+  async function runConfirm() {
+    if (!pendingConfirm) return;
+    setConfirmBusy(true);
     try {
-      await api(`/lots/${lotId}/cancel`, { method: "POST" });
-      setCancelMsg(`Lote "${title}" cancelado${bidCount > 0 ? " — estorno realizado." : "."}`);
-      setRefreshKey((k) => k + 1);
-    } catch (err) {
-      setCancelMsg(errorMessage(err));
+      await pendingConfirm.action();
+    } finally {
+      setConfirmBusy(false);
+      setPendingConfirm(null);
     }
   }
 
@@ -300,11 +342,6 @@ export default function AuctioneerPanel() {
               </div>
             </div>
 
-            {cancelMsg && (
-              <p className={cancelMsg.includes("cancelado") || cancelMsg.includes("eliminado") ? "msg msg-ok" : "msg msg-err"}>
-                {cancelMsg}
-              </p>
-            )}
             {!data ? (
               <p className="muted">Carregando…</p>
             ) : data.lots.length === 0 ? (
@@ -460,7 +497,6 @@ export default function AuctioneerPanel() {
                     Fuso do navegador: {getBrowserTimeZoneLabel()}
                   </p>
                   {lotError && <p className="msg msg-err">{lotError}</p>}
-                  {lotMsg && <p className="msg msg-ok">{lotMsg}</p>}
                   <button className="btn btn-primary btn-block" disabled={busy}>
                     {busy ? "Salvando…" : <><Icon name="gavel" size={16} /> {editingLot ? "Salvar alterações" : "Publicar lote"}</>}
                   </button>
@@ -478,6 +514,19 @@ export default function AuctioneerPanel() {
           </div>
         </aside>
       </div>
+
+      <Toast message={toast} onClose={() => setToast(null)} />
+
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        title={pendingConfirm?.title ?? ""}
+        description={pendingConfirm?.description}
+        confirmLabel={pendingConfirm?.confirmLabel}
+        tone={pendingConfirm?.tone ?? "danger"}
+        busy={confirmBusy}
+        onConfirm={() => void runConfirm()}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </div>
   );
 }

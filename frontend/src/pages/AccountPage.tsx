@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/auth-context";
 import { errorMessage } from "../lib/utils";
 import Icon from "../components/Icon";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 export default function AccountPage() {
   const { user, updateProfile, deleteAccount } = useAuth();
@@ -14,6 +15,7 @@ export default function AccountPage() {
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   async function saveProfile(event: FormEvent) {
     event.preventDefault();
@@ -49,13 +51,16 @@ export default function AccountPage() {
     }
   }
 
-  async function removeAccount() {
+  function removeAccount() {
     if (!currentPassword) {
       setMessage({ ok: false, text: "Informe a senha atual antes de excluir a conta." });
       return;
     }
-    if (!confirm("Tem a certeza de que deseja excluir a conta? Esta ação não pode ser desfeita.")) return;
+    setConfirmDelete(true);
+  }
 
+  async function confirmRemoveAccount() {
+    setConfirmDelete(false);
     setBusy(true);
     setMessage(null);
     try {
@@ -113,6 +118,17 @@ export default function AccountPage() {
           </div>
         </form>
       </section>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Excluir conta"
+        description="Esta ação não pode ser desfeita. A conta só será excluída se não tiver histórico financeiro, lotes ou lances."
+        confirmLabel="Excluir conta"
+        tone="danger"
+        busy={busy}
+        onConfirm={() => void confirmRemoveAccount()}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }

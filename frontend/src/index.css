@@ -1447,3 +1447,90 @@ input, select, textarea { border-radius: 2px; background: var(--bg2); }
   .auth-shell { border-radius: 2px; }
   .auth-form-panel { padding: 1.75rem 1.15rem; }
 }
+
+/* ─── Toast e diálogo de confirmação ─── */
+.toast {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 2000;
+  display: flex;
+  align-items: flex-start;
+  gap: .6rem;
+  max-width: min(420px, calc(100vw - 2rem));
+  padding: .85rem 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  box-shadow: var(--shadow);
+  animation: toastIn .18s ease both;
+}
+.toast-ok { border-left-color: var(--ok); }
+.toast-err { border-left-color: var(--err); }
+.toast-icon { display: inline-flex; color: var(--accent); flex-shrink: 0; margin-top: .1rem; }
+.toast-ok .toast-icon { color: var(--ok); }
+.toast-err .toast-icon { color: var(--err); }
+.toast-text { font-size: .88rem; line-height: 1.45; }
+.toast-close {
+  margin-left: auto;
+  display: inline-flex;
+  padding: .15rem;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.toast-close:hover { color: var(--text); }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, .55);
+  backdrop-filter: blur(3px);
+  animation: modalFade .15s ease both;
+}
+.modal-card {
+  width: min(440px, 100%);
+  padding: 1.5rem;
+  border-radius: 2px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  animation: modalIn .18s ease both;
+}
+.modal-head { display: flex; align-items: flex-start; gap: .75rem; margin-bottom: .75rem; }
+.modal-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  color: var(--accent);
+}
+.modal-icon-danger { color: var(--err); border-color: var(--err); }
+.modal-head h2 { margin: 0; font-size: 1.35rem; line-height: 1.15; }
+.modal-desc { font-size: .9rem; line-height: 1.55; margin-bottom: 1.25rem; white-space: pre-line; }
+.modal-actions { display: flex; justify-content: flex-end; gap: .6rem; flex-wrap: wrap; }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes modalFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(10px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (max-width: 600px) {
+  .toast { left: 1rem; right: 1rem; bottom: 1rem; max-width: none; }
+  .modal-actions .btn { flex: 1; }
+}
