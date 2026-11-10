@@ -152,18 +152,16 @@ export default function Showcase() {
   return (
     <div className="showcase">
       <section className="showcase-hero">
-        <div className="hero-orb hero-orb-one" />
-        <div className="hero-orb hero-orb-two" />
         <div className="hero-inner">
           <span className="hero-eyebrow">
-            <span className="hero-pulse" /> Leilões em andamento em tempo real
+            <span className="hero-pulse" /> Leilões em andamento
           </span>
           <h1 className="hero-title">
-            Descubra arte. <span className="hero-accent">Dê o seu lance.</span>
+            Arte para descobrir. <span className="hero-accent">Lances para acompanhar.</span>
           </h1>
           <p className="hero-sub">
-            Obras de domínio público do Art Institute of Chicago, com saldo
-            verificável e histórico de lances à prova de alteração.
+            Uma seleção de obras de domínio público do Art Institute of Chicago,
+            com saldo verificável e histórico de lances à prova de alteração.
           </p>
 
           <form onSubmit={search} className="search-bar" role="search">

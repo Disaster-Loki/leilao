@@ -118,7 +118,7 @@ export default function Layout() {
             <span className="brand-mark">CL</span>
             <span className="brand-copy">
               <span className="brand-text">Casa de Leilões</span>
-              <span className="brand-tag">Arte · ao vivo</span>
+              <span className="brand-tag">Curadoria · Leilões</span>
             </span>
           </Link>
 
@@ -224,7 +224,7 @@ export default function Layout() {
           )}
           {user && (
             <NavLink to="/account" className="mobile-link" onClick={() => setMenuOpen(false)}>
-              <Icon name="user" size={16} /> A minha conta
+              <Icon name="user" size={16} /> Minha conta
             </NavLink>
           )}
           {user ? (

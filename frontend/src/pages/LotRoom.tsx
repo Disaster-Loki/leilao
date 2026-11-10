@@ -16,12 +16,12 @@ import { imageSrc, PLACEHOLDER } from "../lib/image";
 import Icon from "../components/Icon";
 
 const CONFETTI_COLORS = [
-  "#6366f1",
-  "#a855f7",
-  "#22c55e",
-  "#f59e0b",
-  "#ef4444",
-  "#38bdf8",
+  "#b08a5a",
+  "#a65b3d",
+  "#7d9a6a",
+  "#c6934a",
+  "#c0645a",
+  "#d2cabd",
 ];
 
 export default function LotRoom() {

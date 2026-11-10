@@ -137,15 +137,15 @@ export default function Login() {
             <span className="brand-mark">CL</span>
             <span className="brand-copy">
               <span className="brand-text">Casa de Leilões</span>
-              <span className="brand-tag">Arte · ao vivo</span>
+              <span className="brand-tag">Curadoria · Leilões</span>
             </span>
           </Link>
 
           <div className="auth-brand-body">
-            <span className="auth-eyebrow">Casa de Leilões</span>
+            <span className="auth-eyebrow">Leilões de arte</span>
 
             <h1>
-              Encontre a sua próxima peça favorita.
+              Encontre a sua próxima peça.
             </h1>
 
             <p>
@@ -171,7 +171,7 @@ export default function Login() {
                   <Icon name="wallet" size={17} />
                 </span>
                 <div>
-                  <strong>A sua carteira</strong>
+                  <strong>Sua carteira</strong>
                   <span>
                     Consulte o saldo e os valores reservados.
                   </span>
