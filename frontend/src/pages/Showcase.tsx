@@ -153,15 +153,11 @@ export default function Showcase() {
     <div className="showcase">
       <section className="showcase-hero">
         <div className="hero-inner">
-          <span className="hero-eyebrow">
-            <span className="hero-pulse" /> Leilões em andamento
-          </span>
           <h1 className="hero-title">
-            Arte para descobrir. <span className="hero-accent">Lances para acompanhar.</span>
+            Arte para descobrir. <span className="hero-accent">Lances ao vivo.</span>
           </h1>
           <p className="hero-sub">
-            Uma seleção de obras de domínio público do Art Institute of Chicago,
-            com saldo verificável e histórico de lances à prova de alteração.
+            Obras de domínio público do Art Institute of Chicago.
           </p>
 
           <form onSubmit={search} className="search-bar" role="search">
@@ -184,21 +180,6 @@ export default function Showcase() {
               </button>
             )}
           </form>
-
-          <div className="hero-stats">
-            <div className="hero-stat">
-              <strong>{counts.live}</strong>
-              <span>ao vivo</span>
-            </div>
-            <div className="hero-stat">
-              <strong>{counts.scheduled}</strong>
-              <span>agendados</span>
-            </div>
-            <div className="hero-stat">
-              <strong>{counts.ended}</strong>
-              <span>encerrados</span>
-            </div>
-          </div>
         </div>
       </section>
 
